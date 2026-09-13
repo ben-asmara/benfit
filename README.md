@@ -217,3 +217,7 @@ Adds:
 
 ### Database step
 Run `supabase/v2_7_migration.sql` once in Supabase SQL Editor.
+
+## V2.7.1 Hotfix
+
+Fixes a client-side ReferenceError caused by the personalized dashboard rendering `avatar` and `journey` before those computed values were defined. Also restores the Profile tab in the top navigation.
