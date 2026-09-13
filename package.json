@@ -1,6 +1,6 @@
 {
   "name": "benfit-cloud-v2",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,7 +12,8 @@
     "@supabase/supabase-js": "^2.49.1",
     "next": "^15.2.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "html5-qrcode": "^2.3.8"
   },
   "devDependencies": {}
 }

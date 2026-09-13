@@ -90,12 +90,15 @@ Photo-based nutrition is inherently approximate. Confirm the estimate before log
 
 ## 8. Barcode scanning
 
-Camera scanning uses the browser's `BarcodeDetector` API where supported.
-
-If unavailable, type the UPC/EAN number manually.
+Camera scanning uses `html5-qrcode`, which works across modern iPhone Safari, Android Chrome, and desktop browsers. If camera access is blocked, type the UPC/EAN number manually.
 
 The product lookup uses Open Food Facts. Nutrition can be per serving or per 100 g depending on the product's database entry, so confirm the package serving size before saving.
 
 ## Important health note
 
 This app is a tracking/planning tool, not a medical device. Calorie estimates—especially from photos—can be wrong. Use trends over time rather than trying to make every daily number perfect.
+
+
+## V2.1 iPhone scanner fix
+
+This release replaces the native BarcodeDetector dependency with html5-qrcode and adds iPhone safe-area/mobile layout fixes.
