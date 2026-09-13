@@ -21,10 +21,23 @@ const workout = {
 
 function todayISO(){return new Date().toISOString().slice(0,10)}
 
+
+function ProgressPhotoUploader({onUpload}){
+  const [pose,setPose]=useState("front");
+  const [date,setDate]=useState(todayISO());
+  const [file,setFile]=useState(null);
+  return <div>
+    <div className="field"><label>Date</label><input type="date" value={date} onChange={e=>setDate(e.target.value)}/></div>
+    <div className="field"><label>Pose</label><select value={pose} onChange={e=>setPose(e.target.value)}><option value="front">Front</option><option value="side">Side</option><option value="back">Back</option></select></div>
+    <div className="field"><label>Photo</label><input type="file" accept="image/*" capture="environment" onChange={e=>setFile(e.target.files?.[0]||null)}/></div>
+    <button className="btn" onClick={()=>file&&onUpload(file,pose,date)}>Upload progress photo</button>
+  </div>
+}
+
 export default function Home(){
   const sb = useMemo(()=>supabaseBrowser(),[]);
   const [session,setSession]=useState(null), [loading,setLoading]=useState(true), [tab,setTab]=useState("dashboard");
-  const [foods,setFoods]=useState([]),[weights,setWeights]=useState([]),[profile,setProfile]=useState({calorie_goal:2500,protein_goal:200,goal_weight:95});
+  const [foods,setFoods]=useState([]),[weights,setWeights]=useState([]),[profile,setProfile]=useState({calorie_goal:2500,protein_goal:200,goal_weight:95}),[measurements,setMeasurements]=useState([]),[prs,setPrs]=useState([]),[progressPhotos,setProgressPhotos]=useState([]);
   const [manual,setManual]=useState({name:"",calories:"",protein:""}), [barcode,setBarcode]=useState(""), [scanMsg,setScanMsg]=useState("");
   const [photo,setPhoto]=useState(null),[photoResult,setPhotoResult]=useState(null),[photoBusy,setPhotoBusy]=useState(false),[photoItems,setPhotoItems]=useState([]);
   const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[authMsg,setAuthMsg]=useState("");
@@ -40,14 +53,20 @@ export default function Home(){
 
   async function refresh(){
     const uid=session.user.id;
-    const [f,w,p]=await Promise.all([
+    const [f,w,p,m,pr,ph]=await Promise.all([
       sb.from("food_logs").select("*").eq("user_id",uid).eq("eaten_on",todayISO()).order("created_at",{ascending:false}),
       sb.from("weights").select("*").eq("user_id",uid).order("logged_on",{ascending:true}),
-      sb.from("profiles").select("*").eq("id",uid).maybeSingle()
+      sb.from("profiles").select("*").eq("id",uid).maybeSingle(),
+      sb.from("measurements").select("*").eq("user_id",uid).order("logged_on",{ascending:true}),
+      sb.from("workout_prs").select("*").eq("user_id",uid).order("logged_on",{ascending:false}),
+      sb.from("progress_photos").select("*").eq("user_id",uid).order("logged_on",{ascending:false})
     ]);
     if(!f.error)setFoods(f.data||[]);
     if(!w.error)setWeights(w.data||[]);
     if(p.data)setProfile(p.data);
+    if(!m.error)setMeasurements(m.data||[]);
+    if(!pr.error)setPrs(pr.data||[]);
+    if(!ph.error)setProgressPhotos(ph.data||[]);
   }
 
   async function signUp(){
@@ -190,13 +209,84 @@ export default function Home(){
     if(error)alert(error.message);else alert("Targets saved.");
   }
 
+
+  async function addMeasurement(e){
+    e.preventDefault();
+    const fd=new FormData(e.currentTarget);
+    const row={
+      user_id:session.user.id,
+      logged_on:fd.get("date"),
+      waist_cm:+fd.get("waist")||null,
+      chest_cm:+fd.get("chest")||null,
+      arm_cm:+fd.get("arm")||null,
+      thigh_cm:+fd.get("thigh")||null
+    };
+    const {error}=await sb.from("measurements").insert(row);
+    if(error) alert(error.message); else {e.currentTarget.reset();refresh();}
+  }
+
+  async function addPR(e){
+    e.preventDefault();
+    const fd=new FormData(e.currentTarget);
+    const row={
+      user_id:session.user.id,
+      logged_on:fd.get("date"),
+      exercise:String(fd.get("exercise")||"").trim(),
+      weight_kg:+fd.get("weight")||0,
+      reps:+fd.get("reps")||0
+    };
+    if(!row.exercise){alert("Enter an exercise.");return}
+    const {error}=await sb.from("workout_prs").insert(row);
+    if(error) alert(error.message); else {e.currentTarget.reset();refresh();}
+  }
+
+  async function uploadProgressPhoto(file, pose, date){
+    if(!file)return;
+    const ext=(file.name.split(".").pop()||"jpg").toLowerCase();
+    const key=`${session.user.id}/${date || todayISO()}-${pose}-${Date.now()}.${ext}`;
+    const up=await sb.storage.from("progress-photos").upload(key,file,{upsert:false,contentType:file.type||"image/jpeg"});
+    if(up.error){alert(up.error.message);return}
+    const pub=sb.storage.from("progress-photos").getPublicUrl(key);
+    const {error}=await sb.from("progress_photos").insert({
+      user_id:session.user.id,
+      logged_on:date || todayISO(),
+      pose,
+      image_url:pub.data.publicUrl,
+      storage_path:key
+    });
+    if(error) alert(error.message); else refresh();
+  }
+
+  async function deleteProgressPhoto(photo){
+    if(photo.storage_path) await sb.storage.from("progress-photos").remove([photo.storage_path]);
+    await sb.from("progress_photos").delete().eq("id",photo.id);
+    refresh();
+  }
+
+  function avgWeightLast(days){
+    const cutoff=new Date(); cutoff.setDate(cutoff.getDate()-days+1);
+    const vals=weights.filter(x=>new Date(x.logged_on+"T12:00:00")>=cutoff).map(x=>+x.weight_kg);
+    return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null;
+  }
+
+  function weeklyChange(){
+    if(weights.length<2) return null;
+    const latest7=weights.slice(-7).map(x=>+x.weight_kg);
+    const prev7=weights.slice(-14,-7).map(x=>+x.weight_kg);
+    if(!latest7.length||!prev7.length) return null;
+    const a=latest7.reduce((s,x)=>s+x,0)/latest7.length;
+    const b=prev7.reduce((s,x)=>s+x,0)/prev7.length;
+    return a-b;
+  }
+
   const totals=foods.reduce((a,f)=>({cal:a.cal+(f.calories||0),pro:a.pro+(f.protein_g||0)}),{cal:0,pro:0});
+  const avg7=avgWeightLast(7), change7=weeklyChange(), latestMeasurement=measurements.at(-1);
   if(loading)return <main className="shell"><div className="card">Loading BenFit...</div></main>;
   if(!session)return <main className="shell auth"><div className="card"><h1>BenFit Journey</h1><p className="muted">Sign in to sync your journey across phones, tablets and computers.</p><div className="field"><label>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)}/></div><div className="field"><label>Password</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)}/></div><div style={{display:"flex",gap:8}}><button className="btn" onClick={signIn}>Sign in</button><button className="btn secondary" onClick={signUp}>Create account</button></div><p className="muted small">{authMsg}</p></div></main>;
 
   return <main className="shell">
     <div className="top"><div><div className="brand">BenFit Journey</div><div className="muted">Cloud-synced cut + muscle-building companion</div></div><button className="btn secondary" onClick={signOut}>Sign out</button></div>
-    <div className="tabs">{["dashboard","food","scanner","progress","schedule","workouts","calendar","settings"].map(x=><button key={x} onClick={()=>{stopScanner();setTab(x)}} className={"tab "+(tab===x?"active":"")}>{x[0].toUpperCase()+x.slice(1)}</button>)}</div>
+    <div className="tabs">{["dashboard","food","scanner","progress","measurements","photos","prs","schedule","workouts","calendar","settings"].map(x=><button key={x} onClick={()=>{stopScanner();setTab(x)}} className={"tab "+(tab===x?"active":"")}>{x[0].toUpperCase()+x.slice(1)}</button>)}</div>
 
     <section className={"section "+(tab==="dashboard"?"active":"")}>
       <div className="grid g4">
@@ -204,6 +294,11 @@ export default function Home(){
         <div className="card"><div className="muted">Protein</div><div className="metric">{Math.round(totals.pro)} g</div><div className="small muted">of {profile.protein_goal} g</div><div className="progress"><div className="bar" style={{width:`${Math.min(100,totals.pro/profile.protein_goal*100)}%`}}/></div></div>
         <div className="card"><div className="muted">Current weight</div><div className="metric">{weights.length?weights.at(-1).weight_kg:"—"} kg</div><div className="small muted">Goal {profile.goal_weight} kg</div></div>
         <div className="card"><div className="muted">Today's focus</div><div className="metric" style={{fontSize:20}}>{new Date().toLocaleDateString(undefined,{weekday:"long"})}</div><div className="small muted">{plan[new Date().toLocaleDateString("en-US",{weekday:"long"})]?.at(-1)||"Recovery"}</div></div>
+      </div>
+      <div className="grid g3" style={{marginTop:14}}>
+        <div className="card"><div className="muted">7-day avg weight</div><div className="metric">{avg7?avg7.toFixed(1):"—"} kg</div><div className="small muted">Use this instead of a single weigh-in.</div></div>
+        <div className="card"><div className="muted">Weekly trend</div><div className="metric">{change7===null?"—":`${change7>0?"+":""}${change7.toFixed(1)} kg`}</div><div className="small muted">{change7===null?"Need more weigh-ins":change7<0?"Trending down":"Trending up"}</div></div>
+        <div className="card"><div className="muted">Waist</div><div className="metric">{latestMeasurement?.waist_cm?`${latestMeasurement.waist_cm} cm`:"—"}</div><div className="small muted">Latest body measurement</div></div>
       </div>
       <div className="grid g2" style={{marginTop:14}}>
         <div className="card"><h3>Today's food</h3>{foods.length?foods.slice(0,5).map(f=><div className="fooditem" key={f.id}><div><b>{f.name}</b><div className="small muted">{f.source} • {f.calories} kcal • {f.protein_g} g protein</div></div></div>):<p className="muted">No food logged yet.</p>}</div>
@@ -261,6 +356,73 @@ export default function Home(){
       <div className="grid g2">
         <form className="card" onSubmit={addWeight}><h2>Log weight</h2><div className="field"><label>Date</label><input name="date" type="date" defaultValue={todayISO()} required/></div><div className="field"><label>Weight (kg)</label><input name="weight" type="number" step="0.1" required/></div><button className="btn">Save weigh-in</button></form>
         <div className="card"><h2>History</h2>{weights.length?weights.slice().reverse().map(w=><div className="fooditem" key={w.id}><span>{w.logged_on}</span><b>{w.weight_kg} kg</b></div>):<p className="muted">No weigh-ins yet.</p>}</div>
+      </div>
+    </section>
+
+
+    <section className={"section "+(tab==="measurements"?"active":"")}>
+      <div className="grid g2">
+        <form className="card" onSubmit={addMeasurement}>
+          <h2>Body measurements</h2>
+          <p className="muted small">Measure under similar conditions each time, ideally once per week.</p>
+          <div className="field"><label>Date</label><input name="date" type="date" defaultValue={todayISO()} required/></div>
+          <div className="row">
+            <div className="field"><label>Waist (cm)</label><input name="waist" type="number" step="0.1"/></div>
+            <div className="field"><label>Chest (cm)</label><input name="chest" type="number" step="0.1"/></div>
+            <div className="field"><label>Arm (cm)</label><input name="arm" type="number" step="0.1"/></div>
+            <div className="field"><label>Thigh (cm)</label><input name="thigh" type="number" step="0.1"/></div>
+          </div>
+          <button className="btn">Save measurements</button>
+        </form>
+        <div className="card">
+          <h2>Measurement history</h2>
+          {measurements.length?measurements.slice().reverse().map(m=><div className="measureRow" key={m.id}>
+            <b>{m.logged_on}</b>
+            <span>Waist {m.waist_cm??"—"} cm</span>
+            <span>Chest {m.chest_cm??"—"} cm</span>
+            <span>Arm {m.arm_cm??"—"} cm</span>
+            <span>Thigh {m.thigh_cm??"—"} cm</span>
+          </div>):<p className="muted">No measurements yet.</p>}
+        </div>
+      </div>
+    </section>
+
+    <section className={"section "+(tab==="photos"?"active":"")}>
+      <div className="grid g2">
+        <div className="card">
+          <h2>Progress photos</h2>
+          <p className="muted small">Use the same lighting, distance, and pose when possible.</p>
+          <ProgressPhotoUploader onUpload={uploadProgressPhoto}/>
+        </div>
+        <div className="card">
+          <h2>Photo history</h2>
+          <div className="photoGrid">
+            {progressPhotos.length?progressPhotos.map(p=><div className="progressPhotoCard" key={p.id}>
+              <img src={p.image_url} alt={`${p.pose} progress`}/>
+              <div className="small"><b>{p.pose}</b> • {p.logged_on}</div>
+              <button className="btn red" onClick={()=>deleteProgressPhoto(p)}>Delete</button>
+            </div>):<p className="muted">No progress photos yet.</p>}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section className={"section "+(tab==="prs"?"active":"")}>
+      <div className="grid g2">
+        <form className="card" onSubmit={addPR}>
+          <h2>Strength PR tracker</h2>
+          <div className="field"><label>Date</label><input name="date" type="date" defaultValue={todayISO()} required/></div>
+          <div className="field"><label>Exercise</label><input name="exercise" placeholder="Bench Press" required/></div>
+          <div className="row">
+            <div className="field"><label>Weight (kg)</label><input name="weight" type="number" step="0.5" required/></div>
+            <div className="field"><label>Reps</label><input name="reps" type="number" required/></div>
+            <div></div><button className="btn">Save PR</button>
+          </div>
+        </form>
+        <div className="card">
+          <h2>Recent PRs</h2>
+          {prs.length?prs.map(p=><div className="fooditem" key={p.id}><div><b>{p.exercise}</b><div className="small muted">{p.logged_on}</div></div><b>{p.weight_kg} kg × {p.reps}</b></div>):<p className="muted">No PRs yet.</p>}
+        </div>
       </div>
     </section>
 

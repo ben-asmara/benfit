@@ -112,3 +112,23 @@ This release replaces the native BarcodeDetector dependency with html5-qrcode an
 - Saving creates separate daily food-log entries for each item.
 
 To enable meal-photo analysis on Vercel, add `OPENAI_API_KEY` to the project environment variables and redeploy.
+
+
+## V2.3 Progress upgrade
+
+New features:
+- 7-day average weight on the dashboard
+- weekly weight trend
+- waist/chest/arm/thigh measurements
+- progress photo uploads
+- strength PR tracker
+
+### Required Supabase migration
+
+After deploying V2.3, run the new V2.3 SQL section from `supabase/schema.sql` in the Supabase SQL Editor.
+It creates:
+- `measurements`
+- `workout_prs`
+- `progress_photos`
+- `progress-photos` Storage bucket
+- RLS policies for all of the above
