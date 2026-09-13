@@ -800,3 +800,13 @@ button{touch-action:manipulation}
 .scheduleBlock button{border:0;background:none;color:var(--muted);font-size:15px;cursor:pointer;padding:0}
 .scheduleEmpty{font-size:10px;color:var(--muted);padding:10px 2px}
 @media(max-width:900px){.weekSchedule{grid-template-columns:repeat(7,155px)}}
+
+
+/* ---------- V3.3 Starting Weight / Current Weight UX ---------- */
+.profileWeightActions{display:flex;gap:8px;flex-wrap:wrap}
+.baselineModal{max-width:520px}
+.baselineCompare{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0}
+.baselineCompare>div{padding:14px;border:1px solid var(--border);border-radius:14px;background:color-mix(in srgb,var(--panel2) 42%,var(--panel));display:flex;flex-direction:column}
+.baselineCompare small{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.baselineCompare b{font-size:24px;margin-top:5px;font-family:var(--font-display)}
+@media(max-width:520px){.baselineCompare{grid-template-columns:1fr}}

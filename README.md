@@ -353,3 +353,18 @@ The Home dashboard's "Your Day" card now reads from the signed-in user's schedul
 The Schedule screen shows the current week and recurring weekly/daily events. All records remain isolated by Supabase RLS, so friends see only their own schedule.
 
 No new Supabase migration is required if V3.1 calendar tables have already been created.
+
+
+## V3.3 Starting Weight vs Current Weight
+
+BenFit now treats:
+- `Starting weight` as the long-term journey baseline.
+- `Current weight` as the latest weigh-in.
+
+If a user edits the starting weight and it conflicts with their first weigh-in, BenFit asks whether to:
+1. update the baseline only, or
+2. update the baseline and the first weigh-in.
+
+A new `Log current weight` action lets users resume after a break without destroying their original baseline or progress history.
+
+No Supabase migration is required.

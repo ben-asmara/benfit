@@ -86,7 +86,7 @@ function ProgressPhotoUploader({onUpload}){
 
 export default function Home(){
   const sb = useMemo(()=>supabaseBrowser(),[]);
-  const [session,setSession]=useState(null), [loading,setLoading]=useState(true), [tab,setTab]=useState("dashboard"), [theme,setTheme]=useState("emerald"), [showOnboarding,setShowOnboarding]=useState(false), [moreOpen,setMoreOpen]=useState(false);
+  const [session,setSession]=useState(null), [loading,setLoading]=useState(true), [tab,setTab]=useState("dashboard"), [theme,setTheme]=useState("emerald"), [showOnboarding,setShowOnboarding]=useState(false), [moreOpen,setMoreOpen]=useState(false), [showBaselineModal,setShowBaselineModal]=useState(false), [pendingStartWeight,setPendingStartWeight]=useState(null);
   const [foods,setFoods]=useState([]),[weights,setWeights]=useState([]),[profile,setProfile]=useState({calorie_goal:2500,protein_goal:200,goal_weight:95,username:"",display_name:"",avatar:"bolt",bio:"",age:"",sex:"male",height_cm:"",start_weight_kg:"",activity_level:"moderate",goal_type:"lose"}),[measurements,setMeasurements]=useState([]),[prs,setPrs]=useState([]),[progressPhotos,setProgressPhotos]=useState([]),[dailyLogs,setDailyLogs]=useState([]),[workoutSets,setWorkoutSets]=useState([]),[checkins,setCheckins]=useState([]),[calendarEvents,setCalendarEvents]=useState([]),[calendarSettings,setCalendarSettings]=useState(null),[pushEnabled,setPushEnabled]=useState(false);
   const [manual,setManual]=useState({name:"",calories:"",protein:""}), [barcode,setBarcode]=useState(""), [scanMsg,setScanMsg]=useState("");
   const [photo,setPhoto]=useState(null),[photoResult,setPhotoResult]=useState(null),[photoBusy,setPhotoBusy]=useState(false),[photoItems,setPhotoItems]=useState([]);
@@ -823,6 +823,58 @@ export default function Home(){
     else {e.currentTarget.reset();refresh();}
   }
 
+
+  async function saveProfileWithBaselineCheck(){
+    const originalStart=weights.length ? +weights[0].weight_kg : null;
+    const desiredStart=+profile.start_weight_kg||0;
+
+    if(originalStart && desiredStart && Math.abs(originalStart-desiredStart)>0.01){
+      setPendingStartWeight(desiredStart);
+      setShowBaselineModal(true);
+      return;
+    }
+    await savePersonalProfile();
+  }
+
+  async function updateBaselineOnly(){
+    setShowBaselineModal(false);
+    await savePersonalProfile();
+  }
+
+  async function updateBaselineAndFirstWeighIn(){
+    try{
+      if(!weights.length){
+        await savePersonalProfile();
+        setShowBaselineModal(false);
+        return;
+      }
+      const first=[...weights].sort((a,b)=>a.logged_on.localeCompare(b.logged_on))[0];
+      const desired=+pendingStartWeight||+profile.start_weight_kg;
+      const {error}=await sb.from("weights").update({weight_kg:desired}).eq("id",first.id);
+      if(error) throw error;
+      await savePersonalProfile();
+      setShowBaselineModal(false);
+      refresh();
+    }catch(e){ alert(e.message||"Could not update starting weight."); }
+  }
+
+  async function logNewCurrentWeight(){
+    const current=prompt("Enter your current weight in kg:");
+    if(current===null) return;
+    const w=+current;
+    if(!w || w<30 || w>400){alert("Enter a valid weight.");return}
+    const {error}=await sb.from("weights").insert({
+      user_id:session.user.id,
+      logged_on:todayISO(),
+      weight_kg:w
+    });
+    if(error) alert(error.message);
+    else {
+      refresh();
+      alert("Current weight updated. Your starting weight was left unchanged.");
+    }
+  }
+
   const totals=foods.reduce((a,f)=>({cal:a.cal+(f.calories||0),pro:a.pro+(f.protein_g||0)}),{cal:0,pro:0});
   const avg7=avgWeightLast(7), change7=weeklyChange(), latestMeasurement=measurements.at(-1), daily=currentDaily(), score=adherenceScore(), streak=streakDays(), remainingCal=Math.max(0,profile.calorie_goal-totals.cal), remainingPro=Math.max(0,profile.protein_goal-totals.pro), milestone=nextMilestone(), journey=journeyPercent(), avatar=avatarEmoji(profile.avatar);
   if(loading)return <main className="shell"><div className="card">Loading BenFit...</div></main>;
@@ -1240,10 +1292,14 @@ export default function Home(){
           <div className="miniFormGrid">
             <div className="field"><label>Age</label><input type="number" min="16" value={profile.age||""} onChange={e=>setProfile({...profile,age:e.target.value})}/></div>
             <div className="field"><label>Height (cm)</label><input type="number" value={profile.height_cm||""} onChange={e=>setProfile({...profile,height_cm:e.target.value})}/></div>
-            <div className="field"><label>Starting weight (kg)</label><input type="number" step="0.1" value={profile.start_weight_kg||""} onChange={e=>setProfile({...profile,start_weight_kg:e.target.value})}/></div>
+            <div className="field"><label>Starting weight (kg)</label><input type="number" step="0.1" value={profile.start_weight_kg||""} onChange={e=>{setPendingStartWeight(e.target.value);setProfile({...profile,start_weight_kg:e.target.value})}}/></div>
             <div className="field"><label>Goal weight (kg)</label><input type="number" step="0.1" value={profile.goal_weight||""} onChange={e=>setProfile({...profile,goal_weight:e.target.value})}/></div>
           </div>
-          <button className="btn" onClick={savePersonalProfile}>Save profile</button>
+          <div className="profileWeightActions">
+            <button className="btn" onClick={saveProfileWithBaselineCheck}>Save profile</button>
+            <button className="btn secondary" type="button" onClick={logNewCurrentWeight}>Log current weight</button>
+          </div>
+          <p className="small muted" style={{marginTop:8}}>Use “Log current weight” after a break or anytime your weight changes. Starting weight stays as your original journey baseline unless you intentionally correct it.</p>
         </div>
         <div className="card">
           <h2>Choose avatar</h2>
@@ -1331,6 +1387,21 @@ export default function Home(){
       <button className={["progress","measurements","photos","checkin"].includes(tab)?"active":""} onClick={()=>goTo("progress")}><span className="navGlyph">⌁</span><small>Progress</small></button>
       <button className={tab==="profile"?"active":""} onClick={()=>goTo("profile")}><span className="navAvatar">{avatar}</span><small>Profile</small></button>
     </nav>
+
+    {showBaselineModal&&<div className="modalBackdrop">
+      <div className="onboardingCard baselineModal">
+        <div className="eyebrow">Starting weight changed</div>
+        <h2>How should BenFit handle this?</h2>
+        <p className="muted">Your starting weight is the baseline for your transformation. Your current weight should normally be logged as a new weigh-in instead of replacing that baseline.</p>
+        <div className="baselineCompare">
+          <div><small>Original first weigh-in</small><b>{weights.length?[...weights].sort((a,b)=>a.logged_on.localeCompare(b.logged_on))[0]?.weight_kg:"—"} kg</b></div>
+          <div><small>New starting weight</small><b>{pendingStartWeight||profile.start_weight_kg} kg</b></div>
+        </div>
+        <button className="btn" onClick={updateBaselineOnly}>Update baseline only</button>
+        <button className="btn secondary" style={{marginTop:8}} onClick={updateBaselineAndFirstWeighIn}>Update baseline + first weigh-in</button>
+        <button className="btn secondary" style={{marginTop:8}} onClick={()=>setShowBaselineModal(false)}>Cancel</button>
+      </div>
+    </div>}
 
     {showOnboarding&&<div className="modalBackdrop">
       <div className="onboardingCard">
