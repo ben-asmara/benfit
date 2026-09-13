@@ -19,6 +19,17 @@ const workout = {
   Saturday:["Leg press/Squat 3×8–12","RDL 3×8–12","Bulgarian split squat 3×8–12","Leg curl 3×10–15","Core"]
 };
 
+const avatarChoices = [
+  {id:"bolt",emoji:"⚡",label:"Bolt"},
+  {id:"lion",emoji:"🦁",label:"Lion"},
+  {id:"wolf",emoji:"🐺",label:"Wolf"},
+  {id:"tiger",emoji:"🐯",label:"Tiger"},
+  {id:"gorilla",emoji:"🦍",label:"Gorilla"},
+  {id:"robot",emoji:"🤖",label:"Robot"},
+  {id:"fire",emoji:"🔥",label:"Fire"},
+  {id:"crown",emoji:"👑",label:"Crown"}
+];
+
 function todayISO(){return new Date().toISOString().slice(0,10)}
 
 
@@ -60,8 +71,8 @@ function ProgressPhotoUploader({onUpload}){
 
 export default function Home(){
   const sb = useMemo(()=>supabaseBrowser(),[]);
-  const [session,setSession]=useState(null), [loading,setLoading]=useState(true), [tab,setTab]=useState("dashboard"), [theme,setTheme]=useState("emerald");
-  const [foods,setFoods]=useState([]),[weights,setWeights]=useState([]),[profile,setProfile]=useState({calorie_goal:2500,protein_goal:200,goal_weight:95}),[measurements,setMeasurements]=useState([]),[prs,setPrs]=useState([]),[progressPhotos,setProgressPhotos]=useState([]),[dailyLogs,setDailyLogs]=useState([]),[workoutSets,setWorkoutSets]=useState([]),[checkins,setCheckins]=useState([]);
+  const [session,setSession]=useState(null), [loading,setLoading]=useState(true), [tab,setTab]=useState("dashboard"), [theme,setTheme]=useState("emerald"), [showOnboarding,setShowOnboarding]=useState(false);
+  const [foods,setFoods]=useState([]),[weights,setWeights]=useState([]),[profile,setProfile]=useState({calorie_goal:2500,protein_goal:200,goal_weight:95,username:"",display_name:"",avatar:"bolt",bio:""}),[measurements,setMeasurements]=useState([]),[prs,setPrs]=useState([]),[progressPhotos,setProgressPhotos]=useState([]),[dailyLogs,setDailyLogs]=useState([]),[workoutSets,setWorkoutSets]=useState([]),[checkins,setCheckins]=useState([]);
   const [manual,setManual]=useState({name:"",calories:"",protein:""}), [barcode,setBarcode]=useState(""), [scanMsg,setScanMsg]=useState("");
   const [photo,setPhoto]=useState(null),[photoResult,setPhotoResult]=useState(null),[photoBusy,setPhotoBusy]=useState(false),[photoItems,setPhotoItems]=useState([]);
   const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[authMsg,setAuthMsg]=useState("");
@@ -102,7 +113,10 @@ export default function Home(){
     ]);
     if(!f.error)setFoods(f.data||[]);
     if(!w.error)setWeights(w.data||[]);
-    if(p.data)setProfile(p.data);
+    if(p.data){
+      setProfile(p.data);
+      if(!p.data.username && !p.data.display_name) setShowOnboarding(true);
+    }
     if(!m.error)setMeasurements(m.data||[]);
     if(!pr.error)setPrs(pr.data||[]);
     if(!ph.error)setProgressPhotos(ph.data||[]);
@@ -434,16 +448,95 @@ export default function Home(){
     return milestones.find(x=>current>x)||profile.goal_weight;
   }
 
+
+  function avatarEmoji(id){
+    return avatarChoices.find(a=>a.id===id)?.emoji || "⚡";
+  }
+
+  function greeting(){
+    const h=new Date().getHours();
+    if(h<12) return "Good morning";
+    if(h<18) return "Good afternoon";
+    return "Good evening";
+  }
+
+  function firstName(){
+    const n=(profile.display_name||profile.username||session?.user?.email?.split("@")[0]||"Athlete").trim();
+    return n.split(/\s+/)[0];
+  }
+
+  async function savePersonalProfile(){
+    const username=(profile.username||"").trim().toLowerCase().replace(/[^a-z0-9_]/g,"");
+    const row={
+      id:session.user.id,
+      username,
+      display_name:(profile.display_name||"").trim(),
+      avatar:profile.avatar||"bolt",
+      bio:(profile.bio||"").trim(),
+      calorie_goal:+profile.calorie_goal||2500,
+      protein_goal:+profile.protein_goal||200,
+      goal_weight:+profile.goal_weight||95
+    };
+    if(!row.username){alert("Choose a username.");return}
+    const {error}=await sb.from("profiles").upsert(row);
+    if(error){alert(error.message);return}
+    setProfile({...profile,...row});
+    setShowOnboarding(false);
+    refresh();
+  }
+
+  function quickGo(next){ setTab(next); }
+
+  function journeyPercent(){
+    const start=120;
+    const current=weights.length?+weights.at(-1).weight_kg:start;
+    const goal=+profile.goal_weight||95;
+    if(start<=goal) return 0;
+    return Math.max(0,Math.min(100,((start-current)/(start-goal))*100));
+  }
+
   const totals=foods.reduce((a,f)=>({cal:a.cal+(f.calories||0),pro:a.pro+(f.protein_g||0)}),{cal:0,pro:0});
   const avg7=avgWeightLast(7), change7=weeklyChange(), latestMeasurement=measurements.at(-1), daily=currentDaily(), score=adherenceScore(), streak=streakDays(), remainingCal=Math.max(0,profile.calorie_goal-totals.cal), remainingPro=Math.max(0,profile.protein_goal-totals.pro), milestone=nextMilestone();
   if(loading)return <main className="shell"><div className="card">Loading BenFit...</div></main>;
   if(!session)return <main className="shell auth"><div className="card"><h1>BenFit Journey</h1><p className="muted">Sign in to sync your journey across phones, tablets and computers.</p><div className="field"><label>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)}/></div><div className="field"><label>Password</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)}/></div><div style={{display:"flex",gap:8}}><button className="btn" onClick={signIn}>Sign in</button><button className="btn secondary" onClick={signUp}>Create account</button></div><p className="muted small">{authMsg}</p></div></main>;
 
   return <main className="shell">
-    <div className="top"><div><div className="brand">BenFit Journey</div><div className="muted">Cloud-synced cut + muscle-building companion</div></div><button className="btn secondary" onClick={signOut}>Sign out</button></div>
+    <div className="top appTop">
+      <div className="brandWrap">
+        <div className="brandMark">BF</div>
+        <div><div className="brand">BenFit</div><div className="muted small">Build the body. Keep the system.</div></div>
+      </div>
+      <button className="profileChip" onClick={()=>setTab("profile")}>
+        <span className="profileAvatar">{avatar}</span>
+        <span><b>{profile.display_name||profile.username||"Set up profile"}</b><small>@{profile.username||"username"}</small></span>
+      </button>
+    </div>
     <div className="tabs">{["dashboard","food","scanner","progress","measurements","photos","train","prs","checkin","schedule","workouts","calendar","settings"].map(x=><button key={x} onClick={()=>{stopScanner();setTab(x)}} className={"tab "+(tab===x?"active":"")}>{x[0].toUpperCase()+x.slice(1)}</button>)}</div>
 
     <section className={"section "+(tab==="dashboard"?"active":"")}>
+      <div className="welcomeHero">
+        <div className="welcomeIdentity">
+          <div className="welcomeAvatar">{avatar}</div>
+          <div>
+            <div className="eyebrow">{greeting()}</div>
+            <h1>{firstName()}</h1>
+            <p>Stay consistent today. Your future physique is built from days like this.</p>
+          </div>
+        </div>
+        <div className="journeyCard">
+          <div className="journeyTop"><span>Journey to {profile.goal_weight} kg</span><b>{Math.round(journey)}%</b></div>
+          <div className="journeyTrack"><span style={{width:`${journey}%`}}/></div>
+          <div className="journeyBottom"><span>{weights.length?weights.at(-1).weight_kg:"120"} kg now</span><span>{profile.goal_weight} kg goal</span></div>
+        </div>
+      </div>
+
+      <div className="quickActions">
+        <button onClick={()=>quickGo("food")}><span>🍽️</span><b>Log food</b><small>Meal or snack</small></button>
+        <button onClick={()=>quickGo("scanner")}><span>📷</span><b>Scan food</b><small>Barcode</small></button>
+        <button onClick={()=>quickGo("train")}><span>🏋️</span><b>Train</b><small>Log sets</small></button>
+        <button onClick={()=>quickGo("progress")}><span>⚖️</span><b>Weigh in</b><small>Track trend</small></button>
+      </div>
+
       <div className="grid g4">
         <div className="card"><div className="muted">Calories</div><div className="metric">{totals.cal}</div><div className="small muted">of {profile.calorie_goal} kcal</div><div className="progress"><div className="bar" style={{width:`${Math.min(100,totals.cal/profile.calorie_goal*100)}%`}}/></div></div>
         <div className="card"><div className="muted">Protein</div><div className="metric">{Math.round(totals.pro)} g</div><div className="small muted">of {profile.protein_goal} g</div><div className="progress"><div className="bar" style={{width:`${Math.min(100,totals.pro/profile.protein_goal*100)}%`}}/></div></div>
@@ -669,6 +762,42 @@ export default function Home(){
       <div className="grid g2"><div className="card"><h2>Apple Calendar</h2><p className="muted">Download your weekly fitness schedule as an .ics calendar file, then open it on iPhone and add the events to Apple Calendar.</p><a className="btn" href="/api/calendar">Download calendar (.ics)</a></div><div className="card"><h2>Calendar subscription</h2><p className="muted small">For automatic recurring updates, deploy the app and subscribe to the public calendar endpoint using the webcal version of your app URL. This version provides one-way sync from BenFit to Apple Calendar.</p><div className="notice">Example: webcal://YOUR-DOMAIN.com/api/calendar</div></div></div>
     </section>
 
+
+    <section className={"section "+(tab==="profile"?"active":"")}>
+      <div className="profileHero card">
+        <div className="profileHeroAvatar">{avatar}</div>
+        <div className="profileHeroText">
+          <div className="eyebrow">Your BenFit identity</div>
+          <h2>{profile.display_name||"Your name"}</h2>
+          <p className="muted">@{profile.username||"username"} {profile.bio?`• ${profile.bio}`:""}</p>
+        </div>
+      </div>
+
+      <div className="grid g2" style={{marginTop:14}}>
+        <div className="card">
+          <h2>Edit profile</h2>
+          <div className="field"><label>Display name</label><input value={profile.display_name||""} onChange={e=>setProfile({...profile,display_name:e.target.value})} placeholder="Ben"/></div>
+          <div className="field"><label>Username</label><input value={profile.username||""} onChange={e=>setProfile({...profile,username:e.target.value})} placeholder="benfit"/></div>
+          <div className="field"><label>Bio</label><input value={profile.bio||""} onChange={e=>setProfile({...profile,bio:e.target.value})} placeholder="Building a stronger version of me."/></div>
+          <button className="btn" onClick={savePersonalProfile}>Save profile</button>
+        </div>
+        <div className="card">
+          <h2>Choose avatar</h2>
+          <div className="avatarGrid">
+            {avatarChoices.map(a=><button key={a.id} className={"avatarChoice "+(profile.avatar===a.id?"selected":"")} onClick={()=>setProfile({...profile,avatar:a.id})}>
+              <span>{a.emoji}</span><small>{a.label}</small>
+            </button>)}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid g3" style={{marginTop:14}}>
+        <div className="card statCard"><span>🔥</span><div><b>{streak}</b><small>Day streak</small></div></div>
+        <div className="card statCard"><span>🏆</span><div><b>{prs.length}</b><small>PRs logged</small></div></div>
+        <div className="card statCard"><span>📉</span><div><b>{weights.length?`${(+weights[0].weight_kg-(+weights.at(-1).weight_kg)).toFixed(1)} kg`:"0 kg"}</b><small>Total change</small></div></div>
+      </div>
+    </section>
+
     <section className={"section "+(tab==="settings"?"active":"")}>
       <div className="grid g2">
         <div className="card"><h2>Targets</h2><div className="row"><div className="field"><label>Calories</label><input type="number" value={profile.calorie_goal} onChange={e=>setProfile({...profile,calorie_goal:e.target.value})}/></div><div className="field"><label>Protein (g)</label><input type="number" value={profile.protein_goal} onChange={e=>setProfile({...profile,protein_goal:e.target.value})}/></div><div className="field"><label>Goal weight (kg)</label><input type="number" value={profile.goal_weight} onChange={e=>setProfile({...profile,goal_weight:e.target.value})}/></div><button className="btn" onClick={saveProfile}>Save</button></div></div>
@@ -696,5 +825,26 @@ export default function Home(){
         </div>
       </div>
     </section>
+
+    {showOnboarding&&<div className="modalBackdrop">
+      <div className="onboardingCard">
+        <div className="onboardingLogo">BF</div>
+        <div className="eyebrow">Welcome to BenFit</div>
+        <h2>Make it yours</h2>
+        <p className="muted">Choose how BenFit should welcome you. You can change everything later.</p>
+
+        <div className="field"><label>Display name</label><input value={profile.display_name||""} onChange={e=>setProfile({...profile,display_name:e.target.value})} placeholder="Ben"/></div>
+        <div className="field"><label>Username</label><input value={profile.username||""} onChange={e=>setProfile({...profile,username:e.target.value})} placeholder="benfit"/></div>
+
+        <label className="modalLabel">Pick an avatar</label>
+        <div className="avatarGrid compact">
+          {avatarChoices.map(a=><button key={a.id} className={"avatarChoice "+(profile.avatar===a.id?"selected":"")} onClick={()=>setProfile({...profile,avatar:a.id})}>
+            <span>{a.emoji}</span><small>{a.label}</small>
+          </button>)}
+        </div>
+
+        <button className="btn onboardingBtn" onClick={savePersonalProfile}>Enter BenFit</button>
+      </div>
+    </div>}
   </main>
 }

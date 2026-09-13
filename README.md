@@ -197,3 +197,23 @@ The selected theme changes:
 Theme preference is stored locally in the browser and can be changed from Settings -> App appearance.
 
 No Supabase migration is required for V2.6.
+
+
+## V2.7 Personalized Experience
+
+Adds:
+- first-time onboarding
+- username
+- display name
+- avatar selection
+- profile bio
+- personalized greeting
+- profile chip in the app header
+- new Profile page
+- quick-action dashboard
+- journey progress bar
+- redesigned premium dashboard layout
+- profile stats for streaks, PRs, and weight change
+
+### Database step
+Run `supabase/v2_7_migration.sql` once in Supabase SQL Editor.

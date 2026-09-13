@@ -351,3 +351,141 @@ input,textarea,select,
 @media(max-width:900px){
   .themeGrid{grid-template-columns:1fr}
 }
+
+
+/* ---------- V2.7 Personalized App UI ---------- */
+
+.appTop{
+  padding:8px 2px 16px;
+}
+.brandWrap{display:flex;align-items:center;gap:11px}
+.brandMark,.onboardingLogo{
+  display:grid;place-items:center;
+  width:46px;height:46px;border-radius:15px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:var(--buttonText);font-weight:950;letter-spacing:-1px;
+  box-shadow:0 10px 28px color-mix(in srgb,var(--accent) 24%,transparent);
+}
+.brand{font-size:23px;line-height:1}
+.profileChip{
+  display:flex;align-items:center;gap:9px;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:7px 11px 7px 8px;
+  background:color-mix(in srgb,var(--panel) 94%,transparent);
+  color:var(--text);cursor:pointer;
+}
+.profileChip span:last-child{display:flex;flex-direction:column;text-align:left}
+.profileChip small{color:var(--muted);font-size:10px;margin-top:1px}
+.profileAvatar{
+  display:grid;place-items:center;width:38px;height:38px;border-radius:12px;
+  background:var(--panel2);font-size:20px;
+}
+
+.welcomeHero{
+  display:grid;grid-template-columns:1.25fr .75fr;gap:14px;
+  margin-bottom:14px;
+}
+.welcomeIdentity,.journeyCard{
+  border:1px solid var(--border);
+  border-radius:22px;
+  background:linear-gradient(135deg,var(--hero1),var(--hero2));
+  padding:22px;
+  box-shadow:var(--shadow);
+}
+.welcomeIdentity{display:flex;align-items:center;gap:16px}
+.welcomeAvatar{
+  display:grid;place-items:center;flex:0 0 auto;
+  width:76px;height:76px;border-radius:24px;
+  background:color-mix(in srgb,var(--accent) 14%,var(--panel));
+  border:1px solid color-mix(in srgb,var(--accent) 32%,transparent);
+  font-size:39px;
+}
+.eyebrow{
+  text-transform:uppercase;letter-spacing:.14em;font-size:10px;
+  color:var(--accent);font-weight:900;
+}
+.welcomeIdentity h1{font-size:36px;margin:4px 0 3px;letter-spacing:-1px}
+.welcomeIdentity p{margin:0;color:var(--muted);max-width:540px}
+.journeyCard{display:flex;flex-direction:column;justify-content:center}
+.journeyTop,.journeyBottom{display:flex;justify-content:space-between;gap:10px}
+.journeyTop{font-size:13px}.journeyTop b{font-size:20px}
+.journeyBottom{font-size:11px;color:var(--muted)}
+.journeyTrack{
+  height:12px;background:color-mix(in srgb,var(--panel2) 55%,var(--bg));
+  border-radius:999px;overflow:hidden;margin:13px 0 8px;
+}
+.journeyTrack span{
+  display:block;height:100%;border-radius:999px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  box-shadow:0 0 20px color-mix(in srgb,var(--accent) 35%,transparent);
+}
+
+.quickActions{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;
+}
+.quickActions button{
+  display:grid;grid-template-columns:42px 1fr;grid-template-rows:auto auto;
+  column-gap:10px;text-align:left;align-items:center;
+  border:1px solid var(--border);border-radius:17px;padding:12px;
+  background:color-mix(in srgb,var(--panel) 95%,transparent);
+  color:var(--text);cursor:pointer;
+  transition:transform .15s ease,border-color .15s ease,background .15s ease;
+}
+.quickActions button:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--accent) 35%,var(--border))}
+.quickActions span{grid-row:1/3;display:grid;place-items:center;width:42px;height:42px;border-radius:12px;background:var(--panel2);font-size:20px}
+.quickActions b{font-size:13px}.quickActions small{font-size:10px;color:var(--muted)}
+
+.profileHero{
+  display:flex;align-items:center;gap:18px;
+  background:linear-gradient(135deg,var(--hero1),var(--hero2));
+}
+.profileHeroAvatar{
+  display:grid;place-items:center;width:92px;height:92px;border-radius:28px;
+  background:color-mix(in srgb,var(--accent) 15%,var(--panel));font-size:48px;
+}
+.profileHeroText h2{font-size:30px;margin:4px 0 2px}
+.profileHeroText p{margin:0}
+.avatarGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.avatarGrid.compact{grid-template-columns:repeat(4,1fr)}
+.avatarChoice{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;
+  min-height:88px;border-radius:16px;border:1px solid var(--border);
+  background:color-mix(in srgb,var(--panel2) 42%,var(--panel));
+  color:var(--text);cursor:pointer;
+}
+.avatarChoice span{font-size:30px}.avatarChoice small{color:var(--muted)}
+.avatarChoice.selected{outline:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 11%,var(--panel))}
+.statCard{display:flex;align-items:center;gap:13px}
+.statCard>span{font-size:26px}.statCard div{display:flex;flex-direction:column}.statCard b{font-size:23px}.statCard small{color:var(--muted)}
+
+.modalBackdrop{
+  position:fixed;inset:0;z-index:1000;
+  background:rgba(0,0,0,.72);backdrop-filter:blur(10px);
+  display:grid;place-items:center;padding:20px;
+}
+.onboardingCard{
+  width:min(560px,100%);max-height:92vh;overflow:auto;
+  border:1px solid var(--border);border-radius:26px;
+  background:var(--panel);padding:26px;box-shadow:0 30px 90px rgba(0,0,0,.48);
+}
+.onboardingCard .onboardingLogo{margin-bottom:16px}
+.onboardingCard h2{font-size:32px;margin:5px 0}
+.modalLabel{display:block;font-size:12px;color:var(--muted);margin:12px 0 8px}
+.onboardingBtn{width:100%;margin-top:16px;padding:13px}
+
+@media(max-width:900px){
+  .profileChip span:last-child{display:none}
+  .profileChip{padding:6px}
+  .welcomeHero{grid-template-columns:1fr}
+  .welcomeIdentity{padding:18px}
+  .welcomeAvatar{width:62px;height:62px;border-radius:20px;font-size:32px}
+  .welcomeIdentity h1{font-size:30px}
+  .quickActions{grid-template-columns:repeat(2,1fr)}
+  .avatarGrid{grid-template-columns:repeat(4,1fr)}
+}
+@media(max-width:520px){
+  .quickActions{grid-template-columns:1fr 1fr}
+  .avatarGrid,.avatarGrid.compact{grid-template-columns:repeat(4,1fr)}
+  .avatarChoice{min-height:74px}.avatarChoice span{font-size:25px}
+}
