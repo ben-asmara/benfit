@@ -333,3 +333,23 @@ Header:
 The `CRON_SECRET` must match the value configured in Vercel Environment Variables.
 
 If you later upgrade to a Vercel plan that supports sub-daily cron frequency, you can restore a Vercel cron entry.
+
+
+## V3.2 Personal Schedule
+
+The old hard-coded Ben schedule has been removed from the user experience.
+
+Every account now builds its own schedule from its own `calendar_events` rows:
+- work
+- school / classes
+- workouts
+- meal prep
+- recovery
+- weigh-ins
+- custom activities
+
+The Home dashboard's "Your Day" card now reads from the signed-in user's schedule instead of Ben's original static timetable.
+
+The Schedule screen shows the current week and recurring weekly/daily events. All records remain isolated by Supabase RLS, so friends see only their own schedule.
+
+No new Supabase migration is required if V3.1 calendar tables have already been created.
