@@ -810,3 +810,162 @@ button{touch-action:manipulation}
 .baselineCompare small{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em}
 .baselineCompare b{font-size:24px;margin-top:5px;font-family:var(--font-display)}
 @media(max-width:520px){.baselineCompare{grid-template-columns:1fr}}
+
+
+/* ---------- V3.4 Decluttered App UI ---------- */
+
+.compactTodayGrid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  margin-top:14px;
+}
+
+.compactStat{
+  border:1px solid var(--border);
+  border-radius:16px;
+  background:color-mix(in srgb,var(--panel) 96%,transparent);
+  padding:14px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  grid-template-rows:auto auto;
+  gap:2px 8px;
+}
+
+.compactStat span{
+  grid-column:1 / 3;
+  color:var(--muted);
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-weight:800;
+}
+
+.compactStat b{
+  font-family:var(--font-display);
+  font-size:28px;
+  line-height:1;
+  letter-spacing:-.04em;
+}
+
+.compactStat small{
+  align-self:end;
+  color:var(--muted);
+  font-size:10px;
+}
+
+.dashboardSimpleCard{
+  border:1px solid var(--border);
+  border-radius:18px;
+  background:color-mix(in srgb,var(--panel) 96%,transparent);
+  padding:16px;
+  margin-top:10px;
+}
+
+.dashboardSimpleHead{
+  display:flex;
+  justify-content:space-between;
+  gap:16px;
+  align-items:center;
+}
+
+.dashboardSimpleHead h3{
+  margin:3px 0 2px;
+  font-size:18px;
+}
+
+.dashboardSimpleHead p{
+  margin:0;
+  color:var(--muted);
+  font-size:12px;
+}
+
+.dashboardExpandBtn{
+  width:100%;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:10px;
+  padding:12px 14px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:transparent;
+  color:var(--muted);
+  cursor:pointer;
+  font-weight:800;
+}
+
+.dashboardExpandBtn:hover{
+  background:color-mix(in srgb,var(--panel2) 25%,transparent);
+  color:var(--text);
+}
+
+.dashboardDetails{
+  margin-top:12px;
+}
+
+@media(max-width:900px){
+  .nativeRingGrid{
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+  }
+
+  .nativeRingCard{
+    padding:10px 6px;
+  }
+
+  .ringWrap{
+    width:86px;
+    height:86px;
+  }
+
+  .ringInner b{
+    font-size:18px;
+  }
+
+  .compactTodayGrid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .compactStat{
+    padding:12px;
+  }
+
+  .compactStat b{
+    font-size:24px;
+  }
+
+  .dashboardSimpleHead{
+    align-items:flex-start;
+  }
+
+  .desktopAppNav{
+    display:none!important;
+  }
+
+  .nativeTopbar{
+    margin-bottom:8px;
+  }
+
+  .nativeTitleRow{
+    margin-bottom:12px;
+  }
+}
+
+@media(max-width:520px){
+  .welcomeHero,
+  .nativeHeroStats,
+  .quickActions,
+  .nativeQuickGrid{
+    gap:8px;
+  }
+
+  .nativeQuickGrid{
+    grid-template-columns:repeat(2,1fr);
+  }
+
+  .dashboardSimpleHead .btn{
+    padding:8px 10px;
+    font-size:11px;
+  }
+}

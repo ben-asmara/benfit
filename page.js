@@ -86,7 +86,7 @@ function ProgressPhotoUploader({onUpload}){
 
 export default function Home(){
   const sb = useMemo(()=>supabaseBrowser(),[]);
-  const [session,setSession]=useState(null), [loading,setLoading]=useState(true), [tab,setTab]=useState("dashboard"), [theme,setTheme]=useState("emerald"), [showOnboarding,setShowOnboarding]=useState(false), [moreOpen,setMoreOpen]=useState(false), [showBaselineModal,setShowBaselineModal]=useState(false), [pendingStartWeight,setPendingStartWeight]=useState(null);
+  const [session,setSession]=useState(null), [loading,setLoading]=useState(true), [tab,setTab]=useState("dashboard"), [theme,setTheme]=useState("emerald"), [showOnboarding,setShowOnboarding]=useState(false), [moreOpen,setMoreOpen]=useState(false), [showBaselineModal,setShowBaselineModal]=useState(false), [pendingStartWeight,setPendingStartWeight]=useState(null), [dashboardExpanded,setDashboardExpanded]=useState(false);
   const [foods,setFoods]=useState([]),[weights,setWeights]=useState([]),[profile,setProfile]=useState({calorie_goal:2500,protein_goal:200,goal_weight:95,username:"",display_name:"",avatar:"bolt",bio:"",age:"",sex:"male",height_cm:"",start_weight_kg:"",activity_level:"moderate",goal_type:"lose"}),[measurements,setMeasurements]=useState([]),[prs,setPrs]=useState([]),[progressPhotos,setProgressPhotos]=useState([]),[dailyLogs,setDailyLogs]=useState([]),[workoutSets,setWorkoutSets]=useState([]),[checkins,setCheckins]=useState([]),[calendarEvents,setCalendarEvents]=useState([]),[calendarSettings,setCalendarSettings]=useState(null),[pushEnabled,setPushEnabled]=useState(false);
   const [manual,setManual]=useState({name:"",calories:"",protein:""}), [barcode,setBarcode]=useState(""), [scanMsg,setScanMsg]=useState("");
   const [photo,setPhoto]=useState(null),[photoResult,setPhotoResult]=useState(null),[photoBusy,setPhotoBusy]=useState(false),[photoItems,setPhotoItems]=useState([]);
@@ -875,6 +875,11 @@ export default function Home(){
     }
   }
 
+
+  function todayPrimaryEvent(){
+    return todaysPersonalEvents()[0] || null;
+  }
+
   const totals=foods.reduce((a,f)=>({cal:a.cal+(f.calories||0),pro:a.pro+(f.protein_g||0)}),{cal:0,pro:0});
   const avg7=avgWeightLast(7), change7=weeklyChange(), latestMeasurement=measurements.at(-1), daily=currentDaily(), score=adherenceScore(), streak=streakDays(), remainingCal=Math.max(0,profile.calorie_goal-totals.cal), remainingPro=Math.max(0,profile.protein_goal-totals.pro), milestone=nextMilestone(), journey=journeyPercent(), avatar=avatarEmoji(profile.avatar);
   if(loading)return <main className="shell"><div className="card">Loading BenFit...</div></main>;
@@ -897,7 +902,7 @@ export default function Home(){
     </header>
     <nav className="desktopAppNav" aria-label="Primary navigation">
       <button className={tab==="dashboard"?"active":""} onClick={()=>goTo("dashboard")}><span>⌂</span>Home</button>
-      <button className={["food","scanner"].includes(tab)?"active":""} onClick={()=>goTo("food")}><span>◉</span>Nutrition</button>
+      <button className={["food","scanner"].includes(tab)?"active":""} onClick={()=>goTo("food")}><span>◉</span>Food</button>
       <button className={["train","workouts","prs"].includes(tab)?"active":""} onClick={()=>goTo("train")}><span>◆</span>Training</button>
       <button className={["progress","measurements","photos","checkin"].includes(tab)?"active":""} onClick={()=>goTo("progress")}><span>↗</span>Progress</button>
       <button className={tab==="profile"?"active":""} onClick={()=>goTo("profile")}><span>●</span>Profile</button>
@@ -962,45 +967,79 @@ export default function Home(){
           <div className="miniProgressTrack"><span style={{width:`${journey}%`}}/></div>
         </div>
       </div>
-      <div className="grid g4" style={{marginTop:14}}>
-        <div className="card"><div className="muted">Calories left</div><div className="metric">{remainingCal}</div><div className="small muted">kcal remaining today</div></div>
-        <div className="card"><div className="muted">Protein left</div><div className="metric">{Math.round(remainingPro)} g</div><div className="small muted">to hit target</div></div>
-        <div className="card"><div className="muted">Adherence</div><div className="metric">{score}%</div><div className="small muted">based on food, water, sleep & steps</div></div>
-        <div className="card"><div className="muted">Streak</div><div className="metric">{streak}</div><div className="small muted">strong days in a row</div></div>
-      </div>
-      <div className="grid g3" style={{marginTop:14}}>
-        <div className="card"><div className="muted">7-day avg weight</div><div className="metric">{avg7?avg7.toFixed(1):"—"} kg</div><div className="small muted">Use this instead of a single weigh-in.</div></div>
-        <div className="card"><div className="muted">Weekly trend</div><div className="metric">{change7===null?"—":`${change7>0?"+":""}${change7.toFixed(1)} kg`}</div><div className="small muted">{change7===null?"Need more weigh-ins":change7<0?"Trending down":"Trending up"}</div></div>
-        <div className="card"><div className="muted">Waist</div><div className="metric">{latestMeasurement?.waist_cm?`${latestMeasurement.waist_cm} cm`:"—"}</div><div className="small muted">Latest body measurement</div></div>
-      </div>
-      <div className="grid g2" style={{marginTop:14}}>
-        <div className="card">
-          <h3>Next milestone</h3>
-          <div className="metric">{milestone} kg</div>
-          <p className="muted small">Keep the process simple: average weight down, strength maintained, waist down.</p>
+      <div className="compactTodayGrid">
+        <div className="compactStat">
+          <span>Calories left</span>
+          <b>{remainingCal}</b>
+          <small>kcal</small>
         </div>
-        <div className="card">
-          <h3>What to eat next</h3>
-          {mealSuggestions().map(x=><div className="fooditem" key={x}><span>{x}</span></div>)}
+        <div className="compactStat">
+          <span>Protein left</span>
+          <b>{Math.round(remainingPro)}</b>
+          <small>g</small>
+        </div>
+        <div className="compactStat">
+          <span>Weight</span>
+          <b>{weights.length?weights.at(-1).weight_kg:"—"}</b>
+          <small>kg</small>
+        </div>
+        <div className="compactStat">
+          <span>Streak</span>
+          <b>{streak}</b>
+          <small>days</small>
         </div>
       </div>
-      <div className="grid g2" style={{marginTop:14}}>
-        <form className="card" onSubmit={saveDailyLog}>
-          <h3>Daily recovery log</h3>
-          <div className="row">
-            <div className="field"><label>Water (L)</label><input name="water" type="number" step="0.1" defaultValue={daily.water_l||""}/></div>
-            <div className="field"><label>Sleep (h)</label><input name="sleep" type="number" step="0.1" defaultValue={daily.sleep_h||""}/></div>
-            <div className="field"><label>Steps</label><input name="steps" type="number" defaultValue={daily.steps||""}/></div>
-            <button className="btn">Save day</button>
+
+      <div className="dashboardSimpleCard">
+        <div className="dashboardSimpleHead">
+          <div>
+            <span className="eyebrow">Today</span>
+            <h3>{todayPrimaryEvent()?.title || "No main event yet"}</h3>
+            <p>{todayPrimaryEvent()?`${todayPrimaryEvent().start_time?.slice(0,5)}–${todayPrimaryEvent().end_time?.slice(0,5)}`:"Use My Schedule to plan your day."}</p>
           </div>
-          <div style={{display:"flex",gap:16,marginTop:8,flexWrap:"wrap"}}>
-            <label className="checkline"><input name="workout_done" type="checkbox" defaultChecked={!!daily.workout_done}/> Workout done</label>
-            <label className="checkline"><input name="protein_hit" type="checkbox" defaultChecked={!!daily.protein_hit}/> Protein hit</label>
-          </div>
-        </form>
-        <div className="card"><h3>Today's food</h3>{foods.length?foods.slice(0,5).map(f=><div className="fooditem" key={f.id}><div><b>{f.name}</b><div className="small muted">{f.source} • {f.calories} kcal • {f.protein_g} g protein</div></div></div>):<p className="muted">No food logged yet.</p>}</div>
-        <div className="card"><h3>Nutrition guardrails</h3><span className="pill">~2,500 kcal start</span><span className="pill">~200 g protein</span><span className="pill">3–4 L water</span><span className="pill">8–10k steps</span><p className="muted small">Photo estimates are approximate. Packaged-food barcode data is usually better, but always confirm the serving size on the label.</p></div>
+          <button className="btn secondary" onClick={()=>goTo("schedule")}>Schedule</button>
+        </div>
       </div>
+
+      <div className="dashboardSimpleCard">
+        <div className="dashboardSimpleHead">
+          <div>
+            <span className="eyebrow">Progress</span>
+            <h3>{avg7?`${avg7.toFixed(1)} kg average`:"Build your baseline"}</h3>
+            <p>{change7===null?"Log more weigh-ins to see a trend.":`${change7>0?"+":""}${change7.toFixed(1)} kg this week`}</p>
+          </div>
+          <button className="btn secondary" onClick={()=>goTo("progress")}>View</button>
+        </div>
+      </div>
+
+      <button className="dashboardExpandBtn" onClick={()=>setDashboardExpanded(v=>!v)}>
+        <span>{dashboardExpanded?"Hide details":"Show more details"}</span>
+        <b>{dashboardExpanded?"⌃":"⌄"}</b>
+      </button>
+
+      {dashboardExpanded&&<div className="dashboardDetails">
+        <div className="grid g3">
+          <div className="card"><div className="muted">Adherence</div><div className="metric">{score}%</div><div className="small muted">food, water, sleep & steps</div></div>
+          <div className="card"><div className="muted">Waist</div><div className="metric">{latestMeasurement?.waist_cm?`${latestMeasurement.waist_cm} cm`:"—"}</div><div className="small muted">latest measurement</div></div>
+          <div className="card"><div className="muted">Next milestone</div><div className="metric">{milestone} kg</div><div className="small muted">next checkpoint</div></div>
+        </div>
+
+        <div className="grid g2" style={{marginTop:14}}>
+          <form className="card" onSubmit={saveDailyLog}>
+            <h3>Daily recovery</h3>
+            <div className="row">
+              <div className="field"><label>Water (L)</label><input name="water" type="number" step="0.1" defaultValue={daily.water_l||""}/></div>
+              <div className="field"><label>Sleep (h)</label><input name="sleep" type="number" step="0.1" defaultValue={daily.sleep_h||""}/></div>
+              <div className="field"><label>Steps</label><input name="steps" type="number" defaultValue={daily.steps||""}/></div>
+              <button className="btn">Save</button>
+            </div>
+          </form>
+          <div className="card">
+            <h3>What to eat next</h3>
+            {mealSuggestions().slice(0,3).map(x=><div className="fooditem" key={x}><span>{x}</span></div>)}
+          </div>
+        </div>
+      </div>}
     </section>
 
     <section className={"section "+(tab==="food"?"active":"")}><NativeTitle title="Nutrition" subtitle="Fuel your target without overthinking it."/>

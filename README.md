@@ -368,3 +368,20 @@ If a user edits the starting weight and it conflicts with their first weigh-in, 
 A new `Log current weight` action lets users resume after a break without destroying their original baseline or progress history.
 
 No Supabase migration is required.
+
+
+## V3.4 Decluttered UI
+
+The dashboard has been simplified to reduce visual overload.
+
+Changes:
+- primary information stays visible
+- secondary analytics moved behind "Show more details"
+- compact stats replace multiple large cards
+- today's schedule gets one focused card
+- progress gets one focused card
+- desktop nav is hidden on mobile
+- mobile card spacing and progress rings are more compact
+- fewer competing sections are shown at once
+
+No Supabase migration is required.
