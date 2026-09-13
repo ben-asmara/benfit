@@ -71,8 +71,8 @@ function ProgressPhotoUploader({onUpload}){
 
 export default function Home(){
   const sb = useMemo(()=>supabaseBrowser(),[]);
-  const [session,setSession]=useState(null), [loading,setLoading]=useState(true), [tab,setTab]=useState("dashboard"), [theme,setTheme]=useState("emerald"), [showOnboarding,setShowOnboarding]=useState(false);
-  const [foods,setFoods]=useState([]),[weights,setWeights]=useState([]),[profile,setProfile]=useState({calorie_goal:2500,protein_goal:200,goal_weight:95,username:"",display_name:"",avatar:"bolt",bio:""}),[measurements,setMeasurements]=useState([]),[prs,setPrs]=useState([]),[progressPhotos,setProgressPhotos]=useState([]),[dailyLogs,setDailyLogs]=useState([]),[workoutSets,setWorkoutSets]=useState([]),[checkins,setCheckins]=useState([]);
+  const [session,setSession]=useState(null), [loading,setLoading]=useState(true), [tab,setTab]=useState("dashboard"), [theme,setTheme]=useState("emerald"), [showOnboarding,setShowOnboarding]=useState(false), [moreOpen,setMoreOpen]=useState(false);
+  const [foods,setFoods]=useState([]),[weights,setWeights]=useState([]),[profile,setProfile]=useState({calorie_goal:2500,protein_goal:200,goal_weight:95,username:"",display_name:"",avatar:"bolt",bio:"",age:"",sex:"male",height_cm:"",start_weight_kg:"",activity_level:"moderate",goal_type:"lose"}),[measurements,setMeasurements]=useState([]),[prs,setPrs]=useState([]),[progressPhotos,setProgressPhotos]=useState([]),[dailyLogs,setDailyLogs]=useState([]),[workoutSets,setWorkoutSets]=useState([]),[checkins,setCheckins]=useState([]);
   const [manual,setManual]=useState({name:"",calories:"",protein:""}), [barcode,setBarcode]=useState(""), [scanMsg,setScanMsg]=useState("");
   const [photo,setPhoto]=useState(null),[photoResult,setPhotoResult]=useState(null),[photoBusy,setPhotoBusy]=useState(false),[photoItems,setPhotoItems]=useState([]);
   const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[authMsg,setAuthMsg]=useState("");
@@ -115,7 +115,7 @@ export default function Home(){
     if(!w.error)setWeights(w.data||[]);
     if(p.data){
       setProfile(p.data);
-      if(!p.data.username && !p.data.display_name) setShowOnboarding(true);
+      if(!p.data.username || !p.data.display_name || !p.data.start_weight_kg || !p.data.goal_weight) setShowOnboarding(true);
     }
     if(!m.error)setMeasurements(m.data||[]);
     if(!pr.error)setPrs(pr.data||[]);
@@ -260,9 +260,20 @@ export default function Home(){
     if(error)alert(error.message);else{e.currentTarget.reset();refresh();}
   }
   async function saveProfile(){
-    const row={id:session.user.id,calorie_goal:+profile.calorie_goal,protein_goal:+profile.protein_goal,goal_weight:+profile.goal_weight};
+    const row={
+      id:session.user.id,
+      calorie_goal:+profile.calorie_goal||2500,
+      protein_goal:+profile.protein_goal||160,
+      goal_weight:+profile.goal_weight||95,
+      age:+profile.age||null,
+      sex:profile.sex||"male",
+      height_cm:+profile.height_cm||null,
+      start_weight_kg:+profile.start_weight_kg||null,
+      activity_level:profile.activity_level||"moderate",
+      goal_type:profile.goal_type||"lose"
+    };
     const {error}=await sb.from("profiles").upsert(row);
-    if(error)alert(error.message);else alert("Targets saved.");
+    if(error)alert(error.message);else{ setProfile({...profile,...row}); alert("Goals saved."); }
   }
 
 
@@ -443,9 +454,17 @@ export default function Home(){
   }
 
   function nextMilestone(){
-    const current=weights.length?+weights.at(-1).weight_kg:120;
-    const milestones=[115,110,105,100,95,90];
-    return milestones.find(x=>current>x)||profile.goal_weight;
+    const current=weights.length?+weights.at(-1).weight_kg:(+profile.start_weight_kg||120);
+    const goal=+profile.goal_weight||current;
+    if(goal<current){
+      const next=Math.max(goal,Math.floor((current-0.01)/5)*5);
+      return next;
+    }
+    if(goal>current){
+      const next=Math.min(goal,Math.ceil((current+0.01)/5)*5);
+      return next;
+    }
+    return goal;
   }
 
 
@@ -465,6 +484,22 @@ export default function Home(){
     return n.split(/\s+/)[0];
   }
 
+  function calculateSuggestedTargets(){
+    const age=+profile.age, height=+profile.height_cm, weight=+profile.start_weight_kg, goal=+profile.goal_weight;
+    if(!age||!height||!weight||!goal){alert("Add age, height, current weight and goal weight first.");return}
+    const sexAdjust=profile.sex==="female"?-161:5;
+    const bmr=10*weight+6.25*height-5*age+sexAdjust;
+    const mult={sedentary:1.2,light:1.375,moderate:1.55,very_active:1.725}[profile.activity_level]||1.55;
+    const maintenance=bmr*mult;
+    let calories=maintenance;
+    if(profile.goal_type==="lose") calories-=500;
+    if(profile.goal_type==="gain") calories+=250;
+    calories=Math.round(calories/50)*50;
+    const proteinBase=profile.goal_type==="lose"?goal:weight;
+    const protein=Math.round(proteinBase*(profile.goal_type==="gain"?1.7:1.8));
+    setProfile(p=>({...p,calorie_goal:Math.max(1400,calories),protein_goal:Math.max(80,protein)}));
+  }
+
   async function savePersonalProfile(){
     const username=(profile.username||"").trim().toLowerCase().replace(/[^a-z0-9_]/g,"");
     const row={
@@ -473,26 +508,49 @@ export default function Home(){
       display_name:(profile.display_name||"").trim(),
       avatar:profile.avatar||"bolt",
       bio:(profile.bio||"").trim(),
+      age:+profile.age||null,
+      sex:profile.sex||"male",
+      height_cm:+profile.height_cm||null,
+      start_weight_kg:+profile.start_weight_kg||null,
+      activity_level:profile.activity_level||"moderate",
+      goal_type:profile.goal_type||"lose",
       calorie_goal:+profile.calorie_goal||2500,
-      protein_goal:+profile.protein_goal||200,
+      protein_goal:+profile.protein_goal||160,
       goal_weight:+profile.goal_weight||95
     };
     if(!row.username){alert("Choose a username.");return}
+    if(!row.display_name){alert("Add your display name.");return}
+    if(!row.start_weight_kg || !row.goal_weight){alert("Add your current and goal weight.");return}
     const {error}=await sb.from("profiles").upsert(row);
     if(error){alert(error.message);return}
+
+    const existing=await sb.from("weights").select("id").eq("user_id",session.user.id).limit(1);
+    if(!existing.error && !(existing.data||[]).length && row.start_weight_kg){
+      await sb.from("weights").insert({user_id:session.user.id,logged_on:todayISO(),weight_kg:row.start_weight_kg});
+    }
+
     setProfile({...profile,...row});
     setShowOnboarding(false);
     refresh();
   }
 
-  function quickGo(next){ setTab(next); }
+  async function goTo(next){
+    await stopScanner();
+    setTab(next);
+    setMoreOpen(false);
+    if(typeof window!=="undefined") window.scrollTo({top:0,behavior:"smooth"});
+  }
+
+  function quickGo(next){ goTo(next); }
 
   function journeyPercent(){
-    const start=120;
+    const start=+profile.start_weight_kg || (weights.length?+weights[0].weight_kg:120);
     const current=weights.length?+weights.at(-1).weight_kg:start;
-    const goal=+profile.goal_weight||95;
-    if(start<=goal) return 0;
-    return Math.max(0,Math.min(100,((start-current)/(start-goal))*100));
+    const goal=+profile.goal_weight||start;
+    if(start===goal) return 100;
+    const total=Math.abs(start-goal), moved=Math.abs(start-current);
+    const inRightDirection=(goal<start&&current<=start)||(goal>start&&current>=start);
+    return inRightDirection?Math.max(0,Math.min(100,(moved/total)*100)):0;
   }
 
   const totals=foods.reduce((a,f)=>({cal:a.cal+(f.calories||0),pro:a.pro+(f.protein_g||0)}),{cal:0,pro:0});
@@ -506,12 +564,22 @@ export default function Home(){
         <div className="brandLogoWrap"><img src="/benfit-logo.png" alt="BenFit logo" className="brandLogo"/></div>
         <div><div className="brand">BenFit</div><div className="muted small brandTagline">Track • Fuel • Train • Progress</div></div>
       </div>
-      <button className="profileChip" onClick={()=>setTab("profile")}>
-        <span className="profileAvatar">{avatar}</span>
-        <span><b>{profile.display_name||profile.username||"Set up profile"}</b><small>@{profile.username||"username"}</small></span>
-      </button>
+      <div className="topActions">
+        <button className="profileChip" onClick={()=>goTo("profile")}>
+          <span className="profileAvatar">{avatar}</span>
+          <span><b>{profile.display_name||profile.username||"Set up profile"}</b><small>@{profile.username||"username"}</small></span>
+        </button>
+        <button className="appMenuBtn" onClick={()=>setMoreOpen(v=>!v)} aria-label="Open menu">•••</button>
+      </div>
     </div>
-    <div className="tabs">{["dashboard","food","scanner","progress","measurements","photos","train","prs","checkin","schedule","workouts","calendar","profile","settings"].map(x=><button key={x} onClick={()=>{stopScanner();setTab(x)}} className={"tab "+(tab===x?"active":"")}>{x[0].toUpperCase()+x.slice(1)}</button>)}</div>
+    <nav className="desktopAppNav" aria-label="Primary navigation">
+      <button className={tab==="dashboard"?"active":""} onClick={()=>goTo("dashboard")}><span>⌂</span>Home</button>
+      <button className={["food","scanner"].includes(tab)?"active":""} onClick={()=>goTo("food")}><span>◉</span>Nutrition</button>
+      <button className={["train","workouts","prs"].includes(tab)?"active":""} onClick={()=>goTo("train")}><span>◆</span>Training</button>
+      <button className={["progress","measurements","photos","checkin"].includes(tab)?"active":""} onClick={()=>goTo("progress")}><span>↗</span>Progress</button>
+      <button className={tab==="profile"?"active":""} onClick={()=>goTo("profile")}><span>●</span>Profile</button>
+      <button className={moreOpen?"active":""} onClick={()=>setMoreOpen(v=>!v)}><span>•••</span>More</button>
+    </nav>
 
     <section className={"section "+(tab==="dashboard"?"active":"")}>
       <div className="welcomeHero">
@@ -770,6 +838,7 @@ export default function Home(){
           <div className="eyebrow">Your BenFit identity</div>
           <h2>{profile.display_name||"Your name"}</h2>
           <p className="muted">@{profile.username||"username"} {profile.bio?`• ${profile.bio}`:""}</p>
+          <div className="profileGoalChips"><span>{profile.goal_type==="gain"?"Build":"Goal"}: {profile.goal_weight} kg</span><span>{profile.calorie_goal} kcal/day</span><span>{profile.protein_goal} g protein</span></div>
         </div>
       </div>
 
@@ -779,6 +848,12 @@ export default function Home(){
           <div className="field"><label>Display name</label><input value={profile.display_name||""} onChange={e=>setProfile({...profile,display_name:e.target.value})} placeholder="Ben"/></div>
           <div className="field"><label>Username</label><input value={profile.username||""} onChange={e=>setProfile({...profile,username:e.target.value})} placeholder="benfit"/></div>
           <div className="field"><label>Bio</label><input value={profile.bio||""} onChange={e=>setProfile({...profile,bio:e.target.value})} placeholder="Building a stronger version of me."/></div>
+          <div className="miniFormGrid">
+            <div className="field"><label>Age</label><input type="number" min="16" value={profile.age||""} onChange={e=>setProfile({...profile,age:e.target.value})}/></div>
+            <div className="field"><label>Height (cm)</label><input type="number" value={profile.height_cm||""} onChange={e=>setProfile({...profile,height_cm:e.target.value})}/></div>
+            <div className="field"><label>Starting weight (kg)</label><input type="number" step="0.1" value={profile.start_weight_kg||""} onChange={e=>setProfile({...profile,start_weight_kg:e.target.value})}/></div>
+            <div className="field"><label>Goal weight (kg)</label><input type="number" step="0.1" value={profile.goal_weight||""} onChange={e=>setProfile({...profile,goal_weight:e.target.value})}/></div>
+          </div>
           <button className="btn" onClick={savePersonalProfile}>Save profile</button>
         </div>
         <div className="card">
@@ -800,7 +875,22 @@ export default function Home(){
 
     <section className={"section "+(tab==="settings"?"active":"")}>
       <div className="grid g2">
-        <div className="card"><h2>Targets</h2><div className="row"><div className="field"><label>Calories</label><input type="number" value={profile.calorie_goal} onChange={e=>setProfile({...profile,calorie_goal:e.target.value})}/></div><div className="field"><label>Protein (g)</label><input type="number" value={profile.protein_goal} onChange={e=>setProfile({...profile,protein_goal:e.target.value})}/></div><div className="field"><label>Goal weight (kg)</label><input type="number" value={profile.goal_weight} onChange={e=>setProfile({...profile,goal_weight:e.target.value})}/></div><button className="btn" onClick={saveProfile}>Save</button></div></div>
+        <div className="card">
+          <h2>Personal goals</h2>
+          <p className="muted small">Every account has its own private targets and progress. Use the estimate as a starting point, then adjust from your real results.</p>
+          <div className="miniFormGrid">
+            <div className="field"><label>Age</label><input type="number" min="16" value={profile.age||""} onChange={e=>setProfile({...profile,age:e.target.value})}/></div>
+            <div className="field"><label>Sex for calorie estimate</label><select value={profile.sex||"male"} onChange={e=>setProfile({...profile,sex:e.target.value})}><option value="male">Male</option><option value="female">Female</option></select></div>
+            <div className="field"><label>Height (cm)</label><input type="number" value={profile.height_cm||""} onChange={e=>setProfile({...profile,height_cm:e.target.value})}/></div>
+            <div className="field"><label>Starting weight (kg)</label><input type="number" step="0.1" value={profile.start_weight_kg||""} onChange={e=>setProfile({...profile,start_weight_kg:e.target.value})}/></div>
+            <div className="field"><label>Goal type</label><select value={profile.goal_type||"lose"} onChange={e=>setProfile({...profile,goal_type:e.target.value})}><option value="lose">Lose fat / cut</option><option value="maintain">Maintain</option><option value="gain">Build / gain</option></select></div>
+            <div className="field"><label>Goal weight (kg)</label><input type="number" step="0.1" value={profile.goal_weight||""} onChange={e=>setProfile({...profile,goal_weight:e.target.value})}/></div>
+            <div className="field"><label>Activity</label><select value={profile.activity_level||"moderate"} onChange={e=>setProfile({...profile,activity_level:e.target.value})}><option value="sedentary">Mostly sedentary</option><option value="light">Lightly active</option><option value="moderate">Moderately active</option><option value="very_active">Very active</option></select></div>
+          </div>
+          <div className="targetEstimateRow"><button className="btn secondary" onClick={calculateSuggestedTargets}>Suggest my targets</button><span className="muted small">Estimate only — your weight trend is what we use to refine it.</span></div>
+          <div className="targetNumbers"><div className="field"><label>Calories/day</label><input type="number" value={profile.calorie_goal} onChange={e=>setProfile({...profile,calorie_goal:e.target.value})}/></div><div className="field"><label>Protein/day (g)</label><input type="number" value={profile.protein_goal} onChange={e=>setProfile({...profile,protein_goal:e.target.value})}/></div></div>
+          <button className="btn" onClick={saveProfile}>Save goals</button>
+        </div>
         <div className="card">
           <h2>App appearance</h2>
           <p className="muted small">Change the entire BenFit color system. Your choice is saved on this device.</p>
@@ -826,6 +916,33 @@ export default function Home(){
       </div>
     </section>
 
+    {moreOpen&&<div className="moreBackdrop" onClick={()=>setMoreOpen(false)}>
+      <div className="moreSheet" onClick={e=>e.stopPropagation()}>
+        <div className="moreHandle"/>
+        <div className="moreTitle"><div><div className="eyebrow">BenFit</div><h2>More tools</h2></div><button onClick={()=>setMoreOpen(false)}>×</button></div>
+        <div className="moreGrid">
+          <button onClick={()=>goTo("scanner")}><span>▦</span><b>Barcode scanner</b><small>Scan packaged food</small></button>
+          <button onClick={()=>goTo("measurements")}><span>⌁</span><b>Measurements</b><small>Waist, chest, arms</small></button>
+          <button onClick={()=>goTo("photos")}><span>▣</span><b>Progress photos</b><small>Front, side, back</small></button>
+          <button onClick={()=>goTo("prs")}><span>★</span><b>PRs</b><small>Strength records</small></button>
+          <button onClick={()=>goTo("checkin")}><span>✓</span><b>Weekly check-in</b><small>Energy + adherence</small></button>
+          <button onClick={()=>goTo("schedule")}><span>□</span><b>Schedule</b><small>Your weekly plan</small></button>
+          <button onClick={()=>goTo("workouts")}><span>◇</span><b>Workout plan</b><small>Training program</small></button>
+          <button onClick={()=>goTo("calendar")}><span>◫</span><b>Apple Calendar</b><small>Export training</small></button>
+          <button onClick={()=>goTo("settings")}><span>⚙</span><b>Settings</b><small>Goals + appearance</small></button>
+        </div>
+        <button className="signOutLink" onClick={signOut}>Sign out</button>
+      </div>
+    </div>}
+
+    <nav className="mobileBottomNav" aria-label="Mobile navigation">
+      <button className={tab==="dashboard"?"active":""} onClick={()=>goTo("dashboard")}><span>⌂</span><small>Home</small></button>
+      <button className={["food","scanner"].includes(tab)?"active":""} onClick={()=>goTo("food")}><span>◉</span><small>Nutrition</small></button>
+      <button className={["train","workouts","prs"].includes(tab)?"active":""} onClick={()=>goTo("train")}><span className="trainNavIcon">◆</span><small>Train</small></button>
+      <button className={["progress","measurements","photos","checkin"].includes(tab)?"active":""} onClick={()=>goTo("progress")}><span>↗</span><small>Progress</small></button>
+      <button className={tab==="profile"?"active":""} onClick={()=>goTo("profile")}><span>{avatar}</span><small>Profile</small></button>
+    </nav>
+
     {showOnboarding&&<div className="modalBackdrop">
       <div className="onboardingCard">
         <img src="/benfit-logo.png" alt="BenFit logo" className="onboardingBrandLogo"/>
@@ -833,10 +950,25 @@ export default function Home(){
         <h2>Make it yours</h2>
         <p className="muted">Choose how BenFit should welcome you. You can change everything later.</p>
 
-        <div className="field"><label>Display name</label><input value={profile.display_name||""} onChange={e=>setProfile({...profile,display_name:e.target.value})} placeholder="Ben"/></div>
-        <div className="field"><label>Username</label><input value={profile.username||""} onChange={e=>setProfile({...profile,username:e.target.value})} placeholder="benfit"/></div>
+        <div className="setupSection"><div className="setupSectionTitle"><span>1</span><div><b>Your identity</b><small>This is what BenFit will call you.</small></div></div>
+          <div className="miniFormGrid"><div className="field"><label>Display name</label><input value={profile.display_name||""} onChange={e=>setProfile({...profile,display_name:e.target.value})} placeholder="Ben"/></div><div className="field"><label>Username</label><input value={profile.username||""} onChange={e=>setProfile({...profile,username:e.target.value})} placeholder="benfit"/></div></div>
+        </div>
 
-        <label className="modalLabel">Pick an avatar</label>
+        <div className="setupSection"><div className="setupSectionTitle"><span>2</span><div><b>Your goal</b><small>Your account gets its own targets and progress.</small></div></div>
+          <div className="miniFormGrid">
+            <div className="field"><label>Age</label><input type="number" min="16" value={profile.age||""} onChange={e=>setProfile({...profile,age:e.target.value})}/></div>
+            <div className="field"><label>Sex for estimate</label><select value={profile.sex||"male"} onChange={e=>setProfile({...profile,sex:e.target.value})}><option value="male">Male</option><option value="female">Female</option></select></div>
+            <div className="field"><label>Height (cm)</label><input type="number" value={profile.height_cm||""} onChange={e=>setProfile({...profile,height_cm:e.target.value})}/></div>
+            <div className="field"><label>Current weight (kg)</label><input type="number" step="0.1" value={profile.start_weight_kg||""} onChange={e=>setProfile({...profile,start_weight_kg:e.target.value})}/></div>
+            <div className="field"><label>Goal</label><select value={profile.goal_type||"lose"} onChange={e=>setProfile({...profile,goal_type:e.target.value})}><option value="lose">Lose fat / cut</option><option value="maintain">Maintain</option><option value="gain">Build / gain</option></select></div>
+            <div className="field"><label>Goal weight (kg)</label><input type="number" step="0.1" value={profile.goal_weight||""} onChange={e=>setProfile({...profile,goal_weight:e.target.value})}/></div>
+            <div className="field"><label>Activity</label><select value={profile.activity_level||"moderate"} onChange={e=>setProfile({...profile,activity_level:e.target.value})}><option value="sedentary">Mostly sedentary</option><option value="light">Lightly active</option><option value="moderate">Moderately active</option><option value="very_active">Very active</option></select></div>
+          </div>
+          <button className="btn secondary setupSuggest" onClick={calculateSuggestedTargets}>Suggest calories + protein</button>
+          <div className="suggestedTargets"><span><b>{profile.calorie_goal}</b><small>kcal/day</small></span><span><b>{profile.protein_goal} g</b><small>protein/day</small></span></div>
+        </div>
+
+        <label className="modalLabel">3 · Pick an avatar</label>
         <div className="avatarGrid compact">
           {avatarChoices.map(a=><button key={a.id} className={"avatarChoice "+(profile.avatar===a.id?"selected":"")} onClick={()=>setProfile({...profile,avatar:a.id})}>
             <span>{a.emoji}</span><small>{a.label}</small>

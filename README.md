@@ -231,3 +231,16 @@ Adds:
 - stronger premium fitness-brand visual identity
 
 No Supabase migration is required.
+
+
+## V2.9 App Navigation + Multi-user Goals
+
+- Replaces the crowded tab bar with a modern primary app navigation.
+- Adds a native-style mobile bottom navigation: Home, Nutrition, Train, Progress, Profile.
+- Adds a More sheet for secondary tools such as scanner, measurements, photos, PRs, calendar, and settings.
+- Each signed-in user now sets their own age, height, starting weight, goal weight, activity level, and goal type.
+- Adds an optional calorie/protein target estimator for each user.
+- First-time onboarding creates a personal profile and first weight entry.
+- Existing Supabase RLS means each account continues to see only its own food logs, weights, measurements, training, photos, and goals.
+
+Run `supabase/v2_9_migration.sql` once before using the new personal-goal fields.
