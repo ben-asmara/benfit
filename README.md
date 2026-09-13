@@ -305,3 +305,31 @@ Each account has a unique subscription URL at:
 `/api/calendar/<private-feed-token>`
 
 Use `Calendar -> Copy Apple subscription`, then add it in Apple Calendar as a subscription calendar. Friends receive different feed tokens and see only their own BenFit events.
+
+
+## V3.1.1 Vercel Hobby deployment hotfix
+
+Vercel Hobby projects cannot register a cron that runs every 15 minutes.
+The V3.1 `vercel.json` used:
+
+`*/15 * * * *`
+
+which causes the deployment to fail on Hobby.
+
+This hotfix removes the Vercel-managed cron so the application deploys normally.
+
+### Scheduled push reminders on Hobby
+
+Keep the `/api/push/cron` route. Trigger it from an external scheduler every 15 minutes.
+
+Request:
+
+`GET https://YOUR-BENFIT-DOMAIN.vercel.app/api/push/cron`
+
+Header:
+
+`Authorization: Bearer YOUR_CRON_SECRET`
+
+The `CRON_SECRET` must match the value configured in Vercel Environment Variables.
+
+If you later upgrade to a Vercel plan that supports sub-daily cron frequency, you can restore a Vercel cron entry.
