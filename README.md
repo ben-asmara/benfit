@@ -132,3 +132,22 @@ It creates:
 - `progress_photos`
 - `progress-photos` Storage bucket
 - RLS policies for all of the above
+
+
+## V2.4 Daily Engine
+
+Adds:
+- workout set logging
+- automatic PR detection using estimated 1RM improvement
+- daily water/sleep/steps/recovery logging
+- adherence score
+- strong-day streak
+- calories/protein remaining
+- simple meal suggestions based on remaining macros
+- next weight milestone
+- weight and waist trend charts
+- weekly check-ins
+
+### Database step
+
+Run `supabase/v2_4_migration.sql` once in Supabase SQL Editor before using the new tabs.

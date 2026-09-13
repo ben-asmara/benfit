@@ -102,3 +102,11 @@ body{
   .measureRow{grid-template-columns:1fr 1fr}
   .photoGrid{grid-template-columns:1fr}
 }
+
+.checkline{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.checkline input{width:auto}
+.trendWrap{width:100%}
+.trendSvg{width:100%;height:220px;color:var(--accent);background:#0d1628;border-radius:14px}
+.trendLegend{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-top:6px}
+.checkinCard{padding:12px 0;border-bottom:1px solid var(--border)}
+textarea{resize:vertical}
