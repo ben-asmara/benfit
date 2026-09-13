@@ -983,3 +983,51 @@ button{touch-action:manipulation}
 }
 .emptyPersonalSchedule h2{margin:0 0 6px}
 .emptyPersonalSchedule p{max-width:520px;margin:0 auto}
+
+
+/* ---------- V3.5 Step Tracking ---------- */
+.stepHero{
+  display:grid;
+  grid-template-columns:180px 1fr;
+  gap:24px;
+  align-items:center;
+}
+.stepHeroRing{
+  width:160px;height:160px;border-radius:50%;
+  display:grid;place-items:center;
+  background:conic-gradient(var(--accent) var(--step-pct),color-mix(in srgb,var(--muted) 18%,transparent) 0);
+  position:relative;
+}
+.stepHeroRing:after{
+  content:"";position:absolute;inset:15px;border-radius:50%;background:var(--panel);
+}
+.stepHeroRing>div{
+  position:relative;z-index:1;text-align:center;display:flex;flex-direction:column;
+}
+.stepHeroRing b{font-family:var(--font-display);font-size:30px;line-height:1}
+.stepHeroRing small{color:var(--muted);font-size:10px;margin-top:5px}
+.stepHeroCopy h2{margin:4px 0 6px}
+.stepQuickButtons{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.stepQuickButtons button{
+  border:1px solid var(--border);background:var(--panel2);color:var(--text);
+  border-radius:999px;padding:8px 12px;font-weight:800;cursor:pointer;
+}
+.stepQuickButtons button:hover{border-color:var(--accent);color:var(--accent)}
+.stepBars{
+  height:190px;display:grid;grid-template-columns:repeat(14,1fr);gap:6px;align-items:end;margin-top:12px
+}
+.stepBarItem{height:100%;display:flex;flex-direction:column;gap:5px;align-items:center;justify-content:flex-end}
+.stepBarTrack{
+  width:100%;height:150px;border-radius:999px;background:color-mix(in srgb,var(--muted) 11%,transparent);
+  display:flex;align-items:flex-end;overflow:hidden
+}
+.stepBarTrack span{display:block;width:100%;background:var(--accent);border-radius:999px;min-height:4px}
+.stepBarItem small{font-size:8px;color:var(--muted)}
+.stepLegend{display:flex;justify-content:space-between;color:var(--muted);font-size:10px;margin-top:8px}
+@media(max-width:720px){
+  .stepHero{grid-template-columns:1fr;text-align:center}
+  .stepHeroRing{margin:0 auto;width:145px;height:145px}
+  .stepQuickButtons{justify-content:center}
+  .stepBars{gap:4px;overflow:hidden}
+  .stepBarItem small{font-size:7px}
+}

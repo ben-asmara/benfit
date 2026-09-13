@@ -71,7 +71,7 @@ function ProgressPhotoUploader({onUpload}){
 export default function Home(){
   const sb = useMemo(()=>supabaseBrowser(),[]);
   const [session,setSession]=useState(null), [loading,setLoading]=useState(true), [tab,setTab]=useState("dashboard"), [theme,setTheme]=useState("emerald"), [showOnboarding,setShowOnboarding]=useState(false), [moreOpen,setMoreOpen]=useState(false), [showBaselineModal,setShowBaselineModal]=useState(false), [pendingStartWeight,setPendingStartWeight]=useState(null), [dashboardExpanded,setDashboardExpanded]=useState(false);
-  const [foods,setFoods]=useState([]),[weights,setWeights]=useState([]),[profile,setProfile]=useState({calorie_goal:2500,protein_goal:200,goal_weight:95,username:"",display_name:"",avatar:"bolt",bio:"",age:"",sex:"male",height_cm:"",start_weight_kg:"",activity_level:"moderate",goal_type:"lose"}),[measurements,setMeasurements]=useState([]),[prs,setPrs]=useState([]),[progressPhotos,setProgressPhotos]=useState([]),[dailyLogs,setDailyLogs]=useState([]),[workoutSets,setWorkoutSets]=useState([]),[checkins,setCheckins]=useState([]),[calendarEvents,setCalendarEvents]=useState([]),[calendarSettings,setCalendarSettings]=useState(null),[pushEnabled,setPushEnabled]=useState(false);
+  const [foods,setFoods]=useState([]),[weights,setWeights]=useState([]),[profile,setProfile]=useState({calorie_goal:2500,protein_goal:200,goal_weight:95,username:"",display_name:"",avatar:"bolt",bio:"",age:"",sex:"male",height_cm:"",start_weight_kg:"",activity_level:"moderate",goal_type:"lose",step_goal:10000}),[measurements,setMeasurements]=useState([]),[prs,setPrs]=useState([]),[progressPhotos,setProgressPhotos]=useState([]),[dailyLogs,setDailyLogs]=useState([]),[workoutSets,setWorkoutSets]=useState([]),[checkins,setCheckins]=useState([]),[calendarEvents,setCalendarEvents]=useState([]),[calendarSettings,setCalendarSettings]=useState(null),[pushEnabled,setPushEnabled]=useState(false);
   const [manual,setManual]=useState({name:"",calories:"",protein:""}), [barcode,setBarcode]=useState(""), [scanMsg,setScanMsg]=useState("");
   const [photo,setPhoto]=useState(null),[photoResult,setPhotoResult]=useState(null),[photoBusy,setPhotoBusy]=useState(false),[photoItems,setPhotoItems]=useState([]);
   const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[authMsg,setAuthMsg]=useState("");
@@ -864,6 +864,69 @@ export default function Home(){
     return todaysPersonalEvents()[0] || null;
   }
 
+
+  function stepGoal(){ return +profile.step_goal || 10000; }
+
+  function stepHistory(days=14){
+    const byDate=new Map((dailyLogs||[]).map(x=>[x.logged_on,+x.steps||0]));
+    const out=[];
+    for(let i=days-1;i>=0;i--){
+      const d=new Date();
+      d.setHours(12,0,0,0);
+      d.setDate(d.getDate()-i);
+      const iso=d.toISOString().slice(0,10);
+      out.push({
+        date:iso,
+        label:d.toLocaleDateString(undefined,{weekday:"short"}),
+        steps:byDate.get(iso)||0
+      });
+    }
+    return out;
+  }
+
+  function stepStreak(){
+    const byDate=new Map((dailyLogs||[]).map(x=>[x.logged_on,+x.steps||0]));
+    let streak=0;
+    const d=new Date(); d.setHours(12,0,0,0);
+    for(let i=0;i<365;i++){
+      const iso=d.toISOString().slice(0,10);
+      if((byDate.get(iso)||0)>=stepGoal()) streak++;
+      else if(i===0 && (byDate.get(iso)||0)===0) {}
+      else break;
+      d.setDate(d.getDate()-1);
+    }
+    return streak;
+  }
+
+  async function saveSteps(value){
+    const steps=Math.max(0,Math.round(+value||0));
+    const existing=dailyLogs.find(x=>x.logged_on===todayISO());
+    const payload={
+      user_id:session.user.id,
+      logged_on:todayISO(),
+      steps,
+      water_l:existing?.water_l||0,
+      sleep_h:existing?.sleep_h||0,
+      workout_done:existing?.workout_done||false,
+      protein_hit:existing?.protein_hit||false
+    };
+    const {error}=await sb.from("daily_logs").upsert(payload,{onConflict:"user_id,logged_on"});
+    if(error) alert(error.message); else refresh();
+  }
+
+  async function quickAddSteps(amount){
+    const current=+(dailyLogs.find(x=>x.logged_on===todayISO())?.steps||0);
+    await saveSteps(current+amount);
+  }
+
+  async function saveStepGoal(){
+    const val=prompt("Set your daily step goal:",String(stepGoal()));
+    if(val===null) return;
+    const goal=Math.max(1000,Math.min(50000,Math.round(+val||0)));
+    const {error}=await sb.from("profiles").update({step_goal:goal}).eq("id",session.user.id);
+    if(error) alert(error.message); else {setProfile({...profile,step_goal:goal});}
+  }
+
   const totals=foods.reduce((a,f)=>({cal:a.cal+(f.calories||0),pro:a.pro+(f.protein_g||0)}),{cal:0,pro:0});
   const avg7=avgWeightLast(7), change7=weeklyChange(), latestMeasurement=measurements.at(-1), daily=currentDaily(), score=adherenceScore(), streak=streakDays(), remainingCal=Math.max(0,profile.calorie_goal-totals.cal), remainingPro=Math.max(0,profile.protein_goal-totals.pro), milestone=nextMilestone(), journey=journeyPercent(), avatar=avatarEmoji(profile.avatar);
   if(loading)return <main className="shell"><div className="card">Loading BenFit...</div></main>;
@@ -888,7 +951,7 @@ export default function Home(){
       <button className={tab==="dashboard"?"active":""} onClick={()=>goTo("dashboard")}><span>⌂</span>Home</button>
       <button className={["food","scanner"].includes(tab)?"active":""} onClick={()=>goTo("food")}><span>◉</span>Food</button>
       <button className={["train","workouts","prs"].includes(tab)?"active":""} onClick={()=>goTo("train")}><span>◆</span>Training</button>
-      <button className={["progress","measurements","photos","checkin"].includes(tab)?"active":""} onClick={()=>goTo("progress")}><span>↗</span>Progress</button>
+      <button className={["progress","measurements","photos","checkin","steps"].includes(tab)?"active":""} onClick={()=>goTo("progress")}><span>↗</span>Progress</button>
       <button className={tab==="profile"?"active":""} onClick={()=>goTo("profile")}><span>●</span>Profile</button>
       <button className={moreOpen?"active":""} onClick={()=>setMoreOpen(v=>!v)}><span>•••</span>More</button>
     </nav>
@@ -913,7 +976,7 @@ export default function Home(){
       <div className="nativeRingGrid">
         <MetricRing value={totals.cal} max={profile.calorie_goal} label="kcal" sub={`${remainingCal} left`} icon="🔥"/>
         <MetricRing value={totals.pro} max={profile.protein_goal} label="protein" sub={`${Math.round(remainingPro)} g left`} icon="⚡"/>
-        <MetricRing value={daily.steps||0} max={10000} label="steps" sub="10k target" icon="👟"/>
+        <MetricRing value={daily.steps||0} max={stepGoal()} label="steps" sub={`${stepGoal().toLocaleString()} target`} icon="👟"/>
       </div>
 
       <div className="nativeSectionLabel"><h2>Quick log</h2><button onClick={()=>setMoreOpen(true)}>All tools</button></div>
@@ -921,7 +984,7 @@ export default function Home(){
         <button onClick={()=>quickGo("food")}><span>＋</span><b>Food</b><small>Log a meal</small></button>
         <button onClick={()=>quickGo("scanner")}><span>▦</span><b>Scan</b><small>Barcode</small></button>
         <button onClick={()=>quickGo("train")}><span>◆</span><b>Workout</b><small>Log sets</small></button>
-        <button onClick={()=>quickGo("progress")}><span>↗</span><b>Weight</b><small>Check in</small></button>
+        <button onClick={()=>goTo("steps")}><span>👟</span><b>Steps</b><small>{(daily.steps||0).toLocaleString()} today</small></button>
       </div>
 
       <div className="nativeDashboardGrid">
@@ -1302,6 +1365,56 @@ export default function Home(){
     </section>
 
 
+
+    <section className={"section "+(tab==="steps"?"active":"")}>
+      <NativeTitle title="Steps" subtitle="Track your daily movement, streaks, and weekly consistency." action={<button className="btn secondary" onClick={saveStepGoal}>Goal: {stepGoal().toLocaleString()}</button>}/>
+
+      <div className="stepHero card">
+        <div className="stepHeroRing" style={{"--step-pct":`${Math.min(100,((daily.steps||0)/stepGoal())*100)*3.6}deg`}}>
+          <div><b>{(daily.steps||0).toLocaleString()}</b><small>of {stepGoal().toLocaleString()}</small></div>
+        </div>
+        <div className="stepHeroCopy">
+          <div className="eyebrow">Today</div>
+          <h2>{Math.max(0,stepGoal()-(daily.steps||0)).toLocaleString()} steps to go</h2>
+          <p className="muted">{daily.steps>=stepGoal()?"Goal complete — nice work.":"Every bit counts. Log your movement as the day goes on."}</p>
+          <div className="stepQuickButtons">
+            <button onClick={()=>quickAddSteps(500)}>+500</button>
+            <button onClick={()=>quickAddSteps(1000)}>+1,000</button>
+            <button onClick={()=>quickAddSteps(2500)}>+2,500</button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid g3" style={{marginTop:14}}>
+        <div className="card"><div className="muted">Today</div><div className="metric">{(daily.steps||0).toLocaleString()}</div><div className="small muted">{Math.round(((daily.steps||0)/stepGoal())*100)}% of goal</div></div>
+        <div className="card"><div className="muted">Goal streak</div><div className="metric">{stepStreak()}</div><div className="small muted">days hitting your target</div></div>
+        <div className="card"><div className="muted">7-day average</div><div className="metric">{Math.round(stepHistory(7).reduce((s,x)=>s+x.steps,0)/7).toLocaleString()}</div><div className="small muted">steps per day</div></div>
+      </div>
+
+      <div className="grid g2" style={{marginTop:14}}>
+        <div className="card">
+          <h2>Log today's steps</h2>
+          <div className="field"><label>Steps</label><input id="manual-step-input" type="number" min="0" defaultValue={daily.steps||0}/></div>
+          <button className="btn" onClick={()=>saveSteps(document.getElementById("manual-step-input")?.value)}>Save steps</button>
+          <p className="small muted" style={{marginTop:10}}>For now, BenFit supports manual step entry. Automatic Apple Health / Google Health Connect syncing requires the native mobile version or an approved health-data integration.</p>
+        </div>
+
+        <div className="card">
+          <h2>Last 14 days</h2>
+          <div className="stepBars">
+            {stepHistory(14).map((x,i)=>{
+              const pct=Math.min(100,(x.steps/stepGoal())*100);
+              return <div className="stepBarItem" key={x.date} title={`${x.date}: ${x.steps.toLocaleString()} steps`}>
+                <div className="stepBarTrack"><span style={{height:`${Math.max(4,pct)}%`}}/></div>
+                <small>{x.label}</small>
+              </div>
+            })}
+          </div>
+          <div className="stepLegend"><span>Goal {stepGoal().toLocaleString()}</span><span>{stepHistory(14).filter(x=>x.steps>=stepGoal()).length} goal days</span></div>
+        </div>
+      </div>
+    </section>
+
     <section className={"section "+(tab==="profile"?"active":"")}><NativeTitle title="Profile" subtitle="Your identity, goals, and journey."/>
       <div className="profileHero card">
         <div className="profileHeroAvatar">{avatar}</div>
@@ -1323,7 +1436,7 @@ export default function Home(){
             <div className="field"><label>Age</label><input type="number" min="16" value={profile.age||""} onChange={e=>setProfile({...profile,age:e.target.value})}/></div>
             <div className="field"><label>Height (cm)</label><input type="number" value={profile.height_cm||""} onChange={e=>setProfile({...profile,height_cm:e.target.value})}/></div>
             <div className="field"><label>Starting weight (kg)</label><input type="number" step="0.1" value={profile.start_weight_kg||""} onChange={e=>{setPendingStartWeight(e.target.value);setProfile({...profile,start_weight_kg:e.target.value})}}/></div>
-            <div className="field"><label>Goal weight (kg)</label><input type="number" step="0.1" value={profile.goal_weight||""} onChange={e=>setProfile({...profile,goal_weight:e.target.value})}/></div>
+            <div className="field"><label>Goal weight (kg)</label><input type="number" step="0.1" value={profile.goal_weight||""} onChange={e=>setProfile({...profile,goal_weight:e.target.value})}/></div><div className="field"><label>Daily step goal</label><input type="number" step="500" min="1000" value={profile.step_goal||10000} onChange={e=>setProfile({...profile,step_goal:e.target.value})}/></div>
           </div>
           <div className="profileWeightActions">
             <button className="btn" onClick={saveProfileWithBaselineCheck}>Save profile</button>
@@ -1403,7 +1516,7 @@ export default function Home(){
           <button onClick={()=>goTo("checkin")}><span>✓</span><b>Weekly check-in</b><small>Energy + adherence</small></button>
           <button onClick={()=>goTo("schedule")}><span>□</span><b>Schedule</b><small>Your weekly plan</small></button>
           <button onClick={()=>goTo("workouts")}><span>◇</span><b>Workout plan</b><small>Training program</small></button>
-          <button onClick={()=>goTo("calendar")}><span>◫</span><b>Apple Calendar</b><small>Export training</small></button>
+          <button onClick={()=>goTo("steps")}><span>👟</span><b>Steps</b><small>Daily movement</small></button><button onClick={()=>goTo("calendar")}><span>◫</span><b>Apple Calendar</b><small>Export training</small></button>
           <button onClick={()=>goTo("settings")}><span>⚙</span><b>Settings</b><small>Goals + appearance</small></button>
         </div>
         <button className="signOutLink" onClick={signOut}>Sign out</button>
@@ -1414,7 +1527,7 @@ export default function Home(){
       <button className={tab==="dashboard"?"active":""} onClick={()=>goTo("dashboard")}><span className="navGlyph">⌂</span><small>Home</small></button>
       <button className={["food","scanner"].includes(tab)?"active":""} onClick={()=>goTo("food")}><span className="navGlyph">◫</span><small>Nutrition</small></button>
       <button className={["train","workouts","prs"].includes(tab)?"active centerNav":"centerNav"} onClick={()=>goTo("train")}><span className="trainNavIcon">＋</span><small>Train</small></button>
-      <button className={["progress","measurements","photos","checkin"].includes(tab)?"active":""} onClick={()=>goTo("progress")}><span className="navGlyph">⌁</span><small>Progress</small></button>
+      <button className={["progress","measurements","photos","checkin","steps"].includes(tab)?"active":""} onClick={()=>goTo("progress")}><span className="navGlyph">⌁</span><small>Progress</small></button>
       <button className={tab==="profile"?"active":""} onClick={()=>goTo("profile")}><span className="navAvatar">{avatar}</span><small>Profile</small></button>
     </nav>
 

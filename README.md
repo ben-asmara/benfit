@@ -396,3 +396,22 @@ The static `plan` and `workout` schedule constants are removed from the user-fac
 Schedule rendering now comes only from the signed-in user's `calendar_events` rows. If an account has no personal schedule events, the Schedule screen shows an empty-state message.
 
 No Supabase migration is required.
+
+
+## V3.5 Step Tracking
+
+Added a dedicated Steps experience:
+- per-user daily step goal
+- manual step logging
+- +500 / +1,000 / +2,500 quick add
+- progress ring
+- goal streak
+- 7-day average
+- 14-day chart
+- Home dashboard step ring uses each user's own goal
+- Steps can be opened from the quick actions / tools
+
+Run `supabase/v3_5_migration.sql` once to add `profiles.step_goal`.
+
+### Automatic phone step syncing
+The web/PWA version cannot reliably read Apple Health or Google Health Connect step data directly. V3.5 therefore uses manual logging. Automatic syncing should be added when BenFit is wrapped as a native iOS/Android app (e.g. Capacitor) with HealthKit / Health Connect permissions.
