@@ -496,7 +496,7 @@ export default function Home(){
   }
 
   const totals=foods.reduce((a,f)=>({cal:a.cal+(f.calories||0),pro:a.pro+(f.protein_g||0)}),{cal:0,pro:0});
-  const avg7=avgWeightLast(7), change7=weeklyChange(), latestMeasurement=measurements.at(-1), daily=currentDaily(), score=adherenceScore(), streak=streakDays(), remainingCal=Math.max(0,profile.calorie_goal-totals.cal), remainingPro=Math.max(0,profile.protein_goal-totals.pro), milestone=nextMilestone();
+  const avg7=avgWeightLast(7), change7=weeklyChange(), latestMeasurement=measurements.at(-1), daily=currentDaily(), score=adherenceScore(), streak=streakDays(), remainingCal=Math.max(0,profile.calorie_goal-totals.cal), remainingPro=Math.max(0,profile.protein_goal-totals.pro), milestone=nextMilestone(), journey=journeyPercent(), avatar=avatarEmoji(profile.avatar);
   if(loading)return <main className="shell"><div className="card">Loading BenFit...</div></main>;
   if(!session)return <main className="shell auth"><div className="card"><h1>BenFit Journey</h1><p className="muted">Sign in to sync your journey across phones, tablets and computers.</p><div className="field"><label>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)}/></div><div className="field"><label>Password</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)}/></div><div style={{display:"flex",gap:8}}><button className="btn" onClick={signIn}>Sign in</button><button className="btn secondary" onClick={signUp}>Create account</button></div><p className="muted small">{authMsg}</p></div></main>;
 
@@ -511,7 +511,7 @@ export default function Home(){
         <span><b>{profile.display_name||profile.username||"Set up profile"}</b><small>@{profile.username||"username"}</small></span>
       </button>
     </div>
-    <div className="tabs">{["dashboard","food","scanner","progress","measurements","photos","train","prs","checkin","schedule","workouts","calendar","settings"].map(x=><button key={x} onClick={()=>{stopScanner();setTab(x)}} className={"tab "+(tab===x?"active":"")}>{x[0].toUpperCase()+x.slice(1)}</button>)}</div>
+    <div className="tabs">{["dashboard","food","scanner","progress","measurements","photos","train","prs","checkin","schedule","workouts","calendar","profile","settings"].map(x=><button key={x} onClick={()=>{stopScanner();setTab(x)}} className={"tab "+(tab===x?"active":"")}>{x[0].toUpperCase()+x.slice(1)}</button>)}</div>
 
     <section className={"section "+(tab==="dashboard"?"active":"")}>
       <div className="welcomeHero">
