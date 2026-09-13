@@ -969,3 +969,17 @@ button{touch-action:manipulation}
     font-size:11px;
   }
 }
+
+
+/* ---------- V3.4.1 Schedule Isolation Fix ---------- */
+.emptyPersonalSchedule{
+  text-align:center;
+  padding:34px 20px;
+}
+.emptyScheduleIcon{
+  width:58px;height:58px;margin:0 auto 12px;
+  display:grid;place-items:center;border-radius:18px;
+  background:var(--panel2);font-size:28px;
+}
+.emptyPersonalSchedule h2{margin:0 0 6px}
+.emptyPersonalSchedule p{max-width:520px;margin:0 auto}

@@ -385,3 +385,14 @@ Changes:
 - fewer competing sections are shown at once
 
 No Supabase migration is required.
+
+
+## V3.4.1 Schedule Isolation Fix
+
+Fixes the Schedule screen still exposing Ben's original hard-coded timetable.
+
+The static `plan` and `workout` schedule constants are removed from the user-facing schedule/dashboard behavior.
+
+Schedule rendering now comes only from the signed-in user's `calendar_events` rows. If an account has no personal schedule events, the Schedule screen shows an empty-state message.
+
+No Supabase migration is required.

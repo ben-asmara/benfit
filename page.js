@@ -2,22 +2,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabaseBrowser } from "../lib/supabase-browser";
 
-const plan = {
-  Monday:["Work 9:00 AM–6:00 PM","Push • 7:00–8:15 PM"],
-  Tuesday:["School 10:00 AM–12:00 PM","Work 1:00–5:00 PM","Class 6:00–8:45 PM","Pull • 8:00–9:00 AM"],
-  Wednesday:["Work 12:00–6:00 PM","Recovery walk + mobility"],
-  Thursday:["School 10:00 AM–12:00 PM","Club 2:30–4:30 PM","Legs • 5:00–6:20 PM"],
-  Friday:["School 9:00 AM–2:45 PM","Upper • 4:00–5:15 PM"],
-  Saturday:["Lower + Core • late morning","Meal prep • 60–90 min"],
-  Sunday:["Rest + steps","Weekly weigh-in review"]
-};
-const workout = {
-  Monday:["Bench 4×6–8","Incline DB press 3×8–10","Shoulder press 3×8–10","Lateral raise 4×12–20","Triceps 6 sets"],
-  Tuesday:["Lat pulldown 4×8–12","Chest-supported row 4×8–10","Cable row 3×10–12","Rear delts 3×15–20","Curls 6 sets"],
-  Thursday:["Squat/Hack squat 4×6–10","RDL 3×8–10","Leg press 3×10–12","Leg curl 3×10–15","Calves 4×12–20"],
-  Friday:["Incline bench 3×6–10","Lat pulldown 3×8–12","DB bench 3×8–12","Chest-supported row 3×8–12","Arms + lateral raises"],
-  Saturday:["Leg press/Squat 3×8–12","RDL 3×8–12","Bulgarian split squat 3×8–12","Leg curl 3×10–15","Core"]
-};
 
 const avatarChoices = [
   {id:"bolt",emoji:"⚡",label:"Bolt"},
@@ -1239,18 +1223,25 @@ export default function Home(){
         </div>
       </div>
 
-      <div className="weekSchedule" style={{marginTop:14}}>
-        {weekDates().map(day=><div className={"weekDay "+(day.iso===todayISO()?"today":"")} key={day.iso}>
-          <div className="weekDayHead"><div><b>{day.short}</b><small>{day.label}</small></div>{day.iso===todayISO()&&<span>Today</span>}</div>
-          <div className="weekDayEvents">
-            {eventsForDate(day.iso).length?eventsForDate(day.iso).map(ev=><div className={`scheduleBlock event-${ev.color||"green"}`} key={`${day.iso}-${ev.id}`}>
-              <div className="scheduleTime">{ev.start_time?.slice(0,5)}</div>
-              <div className="scheduleBlockBody"><b>{categoryIcon(ev.category)} {ev.title}</b><small>{ev.start_time?.slice(0,5)}–{ev.end_time?.slice(0,5)}{ev.repeat_rule!=="none"?` · ${ev.repeat_rule}`:""}</small></div>
-              <button onClick={()=>deleteCalendarEvent(ev.id)}>×</button>
-            </div>):<div className="scheduleEmpty">Free</div>}
-          </div>
-        </div>)}
-      </div>
+      {!calendarEvents.length?
+        <div className="emptyPersonalSchedule card" style={{marginTop:14}}>
+          <div className="emptyScheduleIcon">🗓️</div>
+          <h2>Your schedule is empty</h2>
+          <p className="muted">This account does not have any schedule blocks yet. Add work, school, workouts, meal prep, recovery, or anything else above.</p>
+        </div>
+        :
+        <div className="weekSchedule" style={{marginTop:14}}>
+          {weekDates().map(day=><div className={"weekDay "+(day.iso===todayISO()?"today":"")} key={day.iso}>
+            <div className="weekDayHead"><div><b>{day.short}</b><small>{day.label}</small></div>{day.iso===todayISO()&&<span>Today</span>}</div>
+            <div className="weekDayEvents">
+              {eventsForDate(day.iso).length?eventsForDate(day.iso).map(ev=><div className={`scheduleBlock event-${ev.color||"green"}`} key={`${day.iso}-${ev.id}`}>
+                <div className="scheduleTime">{ev.start_time?.slice(0,5)}</div>
+                <div className="scheduleBlockBody"><b>{categoryIcon(ev.category)} {ev.title}</b><small>{ev.start_time?.slice(0,5)}–{ev.end_time?.slice(0,5)}{ev.repeat_rule!=="none"?` · ${ev.repeat_rule}`:""}</small></div>
+                <button onClick={()=>deleteCalendarEvent(ev.id)}>×</button>
+              </div>):<div className="scheduleEmpty">Free</div>}
+            </div>
+          </div>)}
+        </div>}
     </section>
 
     <section className={"section "+(tab==="workouts"?"active":"")}>
