@@ -244,3 +244,21 @@ No Supabase migration is required.
 - Existing Supabase RLS means each account continues to see only its own food logs, weights, measurements, training, photos, and goals.
 
 Run `supabase/v2_9_migration.sql` once before using the new personal-goal fields.
+
+
+## V3.0 Native Mobile UI
+
+Adds a native-style PWA shell:
+- iOS/Android-inspired bottom navigation
+- elevated center Training action
+- large mobile page titles
+- circular calorie, protein and steps rings
+- native-style Home dashboard
+- Today workout card and weight-trend card
+- safe-area support for notches / Dynamic Island
+- 16px mobile inputs to prevent iPhone zoom
+- install helper for PWA use
+- app icons, Apple touch icon, maskable Android icon
+- portrait PWA manifest and full-screen standalone launch
+
+No Supabase migration is required for V3.0.

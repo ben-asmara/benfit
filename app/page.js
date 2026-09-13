@@ -57,6 +57,21 @@ function TrendChart({data,suffix=""}){
   </div>
 }
 
+
+function MetricRing({value,max,label,sub,icon}){
+  const pct=max>0?Math.max(0,Math.min(100,(value/max)*100)):0;
+  return <div className="nativeRingCard">
+    <div className="ringWrap" style={{"--pct":`${pct*3.6}deg`}}>
+      <div className="ringInner"><span className="ringIcon">{icon}</span><b>{Math.round(value)}</b><small>{label}</small></div>
+    </div>
+    <div className="ringMeta"><b>{Math.round(pct)}%</b><small>{sub}</small></div>
+  </div>
+}
+
+function NativeTitle({title,subtitle,action}){
+  return <div className="nativeTitleRow"><div><div className="eyebrow">BenFit</div><h1>{title}</h1>{subtitle&&<p>{subtitle}</p>}</div>{action}</div>
+}
+
 function ProgressPhotoUploader({onUpload}){
   const [pose,setPose]=useState("front");
   const [date,setDate]=useState(todayISO());
@@ -77,6 +92,8 @@ export default function Home(){
   const [photo,setPhoto]=useState(null),[photoResult,setPhotoResult]=useState(null),[photoBusy,setPhotoBusy]=useState(false),[photoItems,setPhotoItems]=useState([]);
   const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[authMsg,setAuthMsg]=useState("");
   const scannerRef=useRef(null);
+  const [installPrompt,setInstallPrompt]=useState(null);
+  const [isStandalone,setIsStandalone]=useState(false);
 
   useEffect(()=>{
     sb.auth.getSession().then(({data})=>{setSession(data.session);setLoading(false)});
@@ -94,6 +111,25 @@ export default function Home(){
     setTheme(next);
     localStorage.setItem("benfit-theme",next);
     document.documentElement.dataset.theme=next;
+  }
+
+
+  useEffect(()=>{
+    if(typeof window==="undefined") return;
+    setIsStandalone(window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone===true);
+    const handler=e=>{e.preventDefault();setInstallPrompt(e)};
+    window.addEventListener("beforeinstallprompt",handler);
+    return ()=>window.removeEventListener("beforeinstallprompt",handler);
+  },[]);
+
+  async function installApp(){
+    if(installPrompt){
+      await installPrompt.prompt();
+      await installPrompt.userChoice;
+      setInstallPrompt(null);
+      return;
+    }
+    alert("On iPhone: open BenFit in Safari → Share → Add to Home Screen. On Android: open the browser menu → Install app / Add to Home screen.");
   }
 
   useEffect(()=>{ if(session) refresh(); },[session]);
@@ -559,19 +595,20 @@ export default function Home(){
   if(!session)return <main className="shell auth"><div className="card"><h1>BenFit Journey</h1><p className="muted">Sign in to sync your journey across phones, tablets and computers.</p><div className="field"><label>Email</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)}/></div><div className="field"><label>Password</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)}/></div><div style={{display:"flex",gap:8}}><button className="btn" onClick={signIn}>Sign in</button><button className="btn secondary" onClick={signUp}>Create account</button></div><p className="muted small">{authMsg}</p></div></main>;
 
   return <main className="shell">
-    <div className="top appTop">
-      <div className="brandWrap">
+    <header className="nativeTopbar">
+      <div className="brandWrap nativeBrand">
         <div className="brandLogoWrap"><img src="/benfit-logo.png" alt="BenFit logo" className="brandLogo"/></div>
         <div><div className="brand">BenFit</div><div className="muted small brandTagline">Track • Fuel • Train • Progress</div></div>
       </div>
       <div className="topActions">
+        {!isStandalone&&<button className="installMini" onClick={installApp} aria-label="Install BenFit">↓</button>}
         <button className="profileChip" onClick={()=>goTo("profile")}>
           <span className="profileAvatar">{avatar}</span>
           <span><b>{profile.display_name||profile.username||"Set up profile"}</b><small>@{profile.username||"username"}</small></span>
         </button>
         <button className="appMenuBtn" onClick={()=>setMoreOpen(v=>!v)} aria-label="Open menu">•••</button>
       </div>
-    </div>
+    </header>
     <nav className="desktopAppNav" aria-label="Primary navigation">
       <button className={tab==="dashboard"?"active":""} onClick={()=>goTo("dashboard")}><span>⌂</span>Home</button>
       <button className={["food","scanner"].includes(tab)?"active":""} onClick={()=>goTo("food")}><span>◉</span>Nutrition</button>
@@ -582,34 +619,47 @@ export default function Home(){
     </nav>
 
     <section className={"section "+(tab==="dashboard"?"active":"")}>
-      <div className="welcomeHero">
-        <div className="welcomeIdentity">
-          <div className="welcomeAvatar">{avatar}</div>
-          <div>
-            <div className="eyebrow">{greeting()}</div>
-            <h1>{firstName()}</h1>
-            <p>Stay consistent today. Your future physique is built from days like this.</p>
-          </div>
+      <NativeTitle
+        title={`${greeting()}, ${firstName()}`}
+        subtitle="Your day, your targets, your next win."
+        action={<button className="nativeAvatarButton" onClick={()=>goTo("profile")}>{avatar}</button>}
+      />
+
+      <div className="nativeHeroCard">
+        <div className="nativeHeroCopy">
+          <span className="nativePill">{profile.goal_type==="gain"?"BUILD PHASE":profile.goal_type==="maintain"?"MAINTENANCE":"CUT PHASE"}</span>
+          <h2>{Math.round(journey)}% to your goal</h2>
+          <p>{weights.length?weights.at(-1).weight_kg:profile.start_weight_kg||"—"} kg now · {profile.goal_weight} kg target</p>
         </div>
-        <div className="journeyCard">
-          <div className="journeyTop"><span>Journey to {profile.goal_weight} kg</span><b>{Math.round(journey)}%</b></div>
-          <div className="journeyTrack"><span style={{width:`${journey}%`}}/></div>
-          <div className="journeyBottom"><span>{weights.length?weights.at(-1).weight_kg:"120"} kg now</span><span>{profile.goal_weight} kg goal</span></div>
-        </div>
+        <div className="nativeHeroProgress"><span style={{width:`${journey}%`}}/></div>
+        <div className="nativeHeroStats"><span><b>{streak}</b><small>day streak</small></span><span><b>{score}%</b><small>adherence</small></span><span><b>{milestone}</b><small>next kg goal</small></span></div>
       </div>
 
-      <div className="quickActions">
-        <button onClick={()=>quickGo("food")}><span>🍽️</span><b>Log food</b><small>Meal or snack</small></button>
-        <button onClick={()=>quickGo("scanner")}><span>📷</span><b>Scan food</b><small>Barcode</small></button>
-        <button onClick={()=>quickGo("train")}><span>🏋️</span><b>Train</b><small>Log sets</small></button>
-        <button onClick={()=>quickGo("progress")}><span>⚖️</span><b>Weigh in</b><small>Track trend</small></button>
+      <div className="nativeRingGrid">
+        <MetricRing value={totals.cal} max={profile.calorie_goal} label="kcal" sub={`${remainingCal} left`} icon="🔥"/>
+        <MetricRing value={totals.pro} max={profile.protein_goal} label="protein" sub={`${Math.round(remainingPro)} g left`} icon="⚡"/>
+        <MetricRing value={daily.steps||0} max={10000} label="steps" sub="10k target" icon="👟"/>
       </div>
 
-      <div className="grid g4">
-        <div className="card"><div className="muted">Calories</div><div className="metric">{totals.cal}</div><div className="small muted">of {profile.calorie_goal} kcal</div><div className="progress"><div className="bar" style={{width:`${Math.min(100,totals.cal/profile.calorie_goal*100)}%`}}/></div></div>
-        <div className="card"><div className="muted">Protein</div><div className="metric">{Math.round(totals.pro)} g</div><div className="small muted">of {profile.protein_goal} g</div><div className="progress"><div className="bar" style={{width:`${Math.min(100,totals.pro/profile.protein_goal*100)}%`}}/></div></div>
-        <div className="card"><div className="muted">Current weight</div><div className="metric">{weights.length?weights.at(-1).weight_kg:"—"} kg</div><div className="small muted">Goal {profile.goal_weight} kg</div></div>
-        <div className="card"><div className="muted">Today's focus</div><div className="metric" style={{fontSize:20}}>{new Date().toLocaleDateString(undefined,{weekday:"long"})}</div><div className="small muted">{plan[new Date().toLocaleDateString("en-US",{weekday:"long"})]?.at(-1)||"Recovery"}</div></div>
+      <div className="nativeSectionLabel"><h2>Quick log</h2><button onClick={()=>setMoreOpen(true)}>All tools</button></div>
+      <div className="nativeQuickGrid">
+        <button onClick={()=>quickGo("food")}><span>＋</span><b>Food</b><small>Log a meal</small></button>
+        <button onClick={()=>quickGo("scanner")}><span>▦</span><b>Scan</b><small>Barcode</small></button>
+        <button onClick={()=>quickGo("train")}><span>◆</span><b>Workout</b><small>Log sets</small></button>
+        <button onClick={()=>quickGo("progress")}><span>↗</span><b>Weight</b><small>Check in</small></button>
+      </div>
+
+      <div className="nativeDashboardGrid">
+        <div className="nativePanel todayWorkoutPanel">
+          <div className="nativePanelHead"><div><small>TODAY</small><h3>{new Date().toLocaleDateString(undefined,{weekday:"long"})}</h3></div><button onClick={()=>goTo("train")}>Start</button></div>
+          <div className="todayWorkoutName">{plan[new Date().toLocaleDateString("en-US",{weekday:"long"})]?.at(-1)||"Recovery day"}</div>
+          <div className="workoutMiniList">{(workout[new Date().toLocaleDateString("en-US",{weekday:"long"})]||["Walk, recover, and hit your steps."]).slice(0,3).map(x=><span key={x}>• {x}</span>)}</div>
+        </div>
+        <div className="nativePanel weightPanel">
+          <div className="nativePanelHead"><div><small>WEIGHT TREND</small><h3>{avg7?`${avg7.toFixed(1)} kg`:"Build baseline"}</h3></div><button onClick={()=>goTo("progress")}>View</button></div>
+          <div className={"trendBadge "+(change7!==null&&change7<0?"down":"")}>{change7===null?"Need more data":`${change7>0?"+":""}${change7.toFixed(1)} kg this week`}</div>
+          <div className="miniProgressTrack"><span style={{width:`${journey}%`}}/></div>
+        </div>
       </div>
       <div className="grid g4" style={{marginTop:14}}>
         <div className="card"><div className="muted">Calories left</div><div className="metric">{remainingCal}</div><div className="small muted">kcal remaining today</div></div>
@@ -652,7 +702,7 @@ export default function Home(){
       </div>
     </section>
 
-    <section className={"section "+(tab==="food"?"active":"")}>
+    <section className={"section "+(tab==="food"?"active":"")}><NativeTitle title="Nutrition" subtitle="Fuel your target without overthinking it."/>
       <div className="grid g2">
         <div className="card"><h2>Log food</h2><div className="field"><label>Food</label><input value={manual.name} onChange={e=>setManual({...manual,name:e.target.value})}/></div><div className="row"><div className="field"><label>Calories</label><input type="number" value={manual.calories} onChange={e=>setManual({...manual,calories:e.target.value})}/></div><div className="field"><label>Protein (g)</label><input type="number" value={manual.protein} onChange={e=>setManual({...manual,protein:e.target.value})}/></div><div></div><button className="btn" onClick={()=>addFood({...manual,source:barcode?"barcode":"manual",barcode})}>Add</button></div>{scanMsg&&<p className="notice small">{scanMsg}</p>}</div>
         <div className="card">
@@ -691,14 +741,14 @@ export default function Home(){
       <div className="card" style={{marginTop:14}}><h3>Today's entries</h3>{foods.map(f=><div className="fooditem" key={f.id}><div><b>{f.name}</b><div className="small muted">{f.calories} kcal • {f.protein_g} g protein • {f.source}</div></div><button className="btn red" onClick={()=>deleteFood(f.id)}>Delete</button></div>)}</div>
     </section>
 
-    <section className={"section "+(tab==="scanner"?"active":"")}>
+    <section className={"section "+(tab==="scanner"?"active":"")}><NativeTitle title="Scan food" subtitle="Point, scan, confirm, log."/>
       <div className="twoCol">
         <div className="card"><h2>Barcode scanner</h2><div className="scanner"><div id="qr-reader"/></div><div style={{display:"flex",gap:8,marginTop:10}}><button className="btn" onClick={startScanner}>Start camera</button><button className="btn secondary" onClick={stopScanner}>Stop</button></div><p className="muted small">{scanMsg || "Works on iPhone Safari, Android Chrome, and desktop browsers with camera access."}</p></div>
         <div className="card"><h2>Manual barcode lookup</h2><div className="field"><label>UPC / EAN</label><input value={barcode} onChange={e=>setBarcode(e.target.value)} placeholder="e.g. 012345678905"/></div><button className="btn" onClick={()=>lookupBarcode(barcode)}>Look up product</button><p className="muted small">Product data is fetched from Open Food Facts. Always confirm serving size against the package.</p></div>
       </div>
     </section>
 
-    <section className={"section "+(tab==="progress"?"active":"")}>
+    <section className={"section "+(tab==="progress"?"active":"")}><NativeTitle title="Progress" subtitle="Follow the trend, not one number."/>
       <div className="grid g2">
         <div className="card"><h2>Weight trend</h2><TrendChart data={weights.map(x=>({date:x.logged_on,value:+x.weight_kg}))} suffix="kg"/></div>
         <div className="card"><h2>Waist trend</h2><TrendChart data={measurements.filter(x=>x.waist_cm).map(x=>({date:x.logged_on,value:+x.waist_cm}))} suffix="cm"/></div>
@@ -758,7 +808,7 @@ export default function Home(){
     </section>
 
 
-    <section className={"section "+(tab==="train"?"active":"")}>
+    <section className={"section "+(tab==="train"?"active":"")}><NativeTitle title="Training" subtitle="Log the work. Beat the old you."/>
       <div className="grid g2">
         <form className="card" onSubmit={addWorkoutSet}>
           <h2>Workout logger</h2>
@@ -831,7 +881,7 @@ export default function Home(){
     </section>
 
 
-    <section className={"section "+(tab==="profile"?"active":"")}>
+    <section className={"section "+(tab==="profile"?"active":"")}><NativeTitle title="Profile" subtitle="Your identity, goals, and journey."/>
       <div className="profileHero card">
         <div className="profileHeroAvatar">{avatar}</div>
         <div className="profileHeroText">
@@ -936,11 +986,11 @@ export default function Home(){
     </div>}
 
     <nav className="mobileBottomNav" aria-label="Mobile navigation">
-      <button className={tab==="dashboard"?"active":""} onClick={()=>goTo("dashboard")}><span>⌂</span><small>Home</small></button>
-      <button className={["food","scanner"].includes(tab)?"active":""} onClick={()=>goTo("food")}><span>◉</span><small>Nutrition</small></button>
-      <button className={["train","workouts","prs"].includes(tab)?"active":""} onClick={()=>goTo("train")}><span className="trainNavIcon">◆</span><small>Train</small></button>
-      <button className={["progress","measurements","photos","checkin"].includes(tab)?"active":""} onClick={()=>goTo("progress")}><span>↗</span><small>Progress</small></button>
-      <button className={tab==="profile"?"active":""} onClick={()=>goTo("profile")}><span>{avatar}</span><small>Profile</small></button>
+      <button className={tab==="dashboard"?"active":""} onClick={()=>goTo("dashboard")}><span className="navGlyph">⌂</span><small>Home</small></button>
+      <button className={["food","scanner"].includes(tab)?"active":""} onClick={()=>goTo("food")}><span className="navGlyph">◫</span><small>Nutrition</small></button>
+      <button className={["train","workouts","prs"].includes(tab)?"active centerNav":"centerNav"} onClick={()=>goTo("train")}><span className="trainNavIcon">＋</span><small>Train</small></button>
+      <button className={["progress","measurements","photos","checkin"].includes(tab)?"active":""} onClick={()=>goTo("progress")}><span className="navGlyph">⌁</span><small>Progress</small></button>
+      <button className={tab==="profile"?"active":""} onClick={()=>goTo("profile")}><span className="navAvatar">{avatar}</span><small>Profile</small></button>
     </nav>
 
     {showOnboarding&&<div className="modalBackdrop">

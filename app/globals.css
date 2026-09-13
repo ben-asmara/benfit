@@ -675,3 +675,48 @@ input,textarea,select{
   .moreGrid{grid-template-columns:1fr 1fr}
   .moreGrid button{grid-template-columns:34px 1fr;padding:10px}.moreGrid button>span{width:34px;height:34px}
 }
+
+
+/* ---------- V3.0 Native Mobile Shell ---------- */
+html{background:var(--bg)}
+body{-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+button{touch-action:manipulation}
+.nativeTopbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.installMini{width:40px;height:40px;border-radius:13px;border:1px solid var(--border);background:var(--panel);color:var(--accent);font-size:20px;font-weight:900;cursor:pointer}
+.nativeTitleRow{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin:10px 0 18px}
+.nativeTitleRow h1{font-size:34px;line-height:1;margin:4px 0 0}.nativeTitleRow p{margin:7px 0 0;color:var(--muted);font-size:13px}
+.nativeAvatarButton{display:grid;place-items:center;width:52px;height:52px;border-radius:17px;border:1px solid var(--border);background:var(--panel2);font-size:25px;cursor:pointer}
+.nativeHeroCard{border-radius:26px;padding:22px;background:linear-gradient(145deg,color-mix(in srgb,var(--accent) 18%,var(--panel)),var(--panel));border:1px solid color-mix(in srgb,var(--accent) 22%,var(--border));box-shadow:var(--shadow)}
+.nativePill{display:inline-block;padding:6px 9px;border-radius:999px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);font-size:9px;font-weight:900;letter-spacing:.12em}
+.nativeHeroCopy h2{font-size:30px;margin:10px 0 4px}.nativeHeroCopy p{margin:0;color:var(--muted);font-size:13px}
+.nativeHeroProgress{height:11px;border-radius:999px;background:color-mix(in srgb,var(--panel2) 65%,var(--bg));overflow:hidden;margin:18px 0 13px}.nativeHeroProgress span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.nativeHeroStats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.nativeHeroStats span{padding:10px;border-radius:15px;background:color-mix(in srgb,var(--panel2) 38%,transparent);text-align:center}.nativeHeroStats b,.nativeHeroStats small{display:block}.nativeHeroStats b{font:800 18px var(--font-display)}.nativeHeroStats small{font-size:9px;color:var(--muted);margin-top:2px}
+.nativeRingGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin:14px 0}
+.nativeRingCard{border-radius:22px;padding:15px;background:var(--panel);border:1px solid var(--border);box-shadow:var(--shadow);display:flex;align-items:center;gap:12px}
+.ringWrap{width:92px;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--accent) var(--pct),color-mix(in srgb,var(--panel2) 65%,transparent) 0);position:relative;flex:0 0 auto}.ringWrap:after{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--panel)}.ringInner{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;line-height:1}.ringIcon{font-size:15px;margin-bottom:3px}.ringInner b{font:800 19px var(--font-display)}.ringInner small{font-size:8px;color:var(--muted);margin-top:3px}.ringMeta b,.ringMeta small{display:block}.ringMeta b{font:800 17px var(--font-display)}.ringMeta small{font-size:9px;color:var(--muted);margin-top:3px}
+.nativeSectionLabel{display:flex;align-items:center;justify-content:space-between;margin:20px 2px 10px}.nativeSectionLabel h2{font-size:19px;margin:0}.nativeSectionLabel button{border:0;background:transparent;color:var(--accent);font-weight:800;cursor:pointer}
+.nativeQuickGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}.nativeQuickGrid button{border:1px solid var(--border);border-radius:18px;background:var(--panel);padding:13px 11px;color:var(--text);text-align:left;cursor:pointer}.nativeQuickGrid span{display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:color-mix(in srgb,var(--accent) 11%,var(--panel2));color:var(--accent);font-size:19px;margin-bottom:9px}.nativeQuickGrid b,.nativeQuickGrid small{display:block}.nativeQuickGrid b{font-size:12px}.nativeQuickGrid small{font-size:9px;color:var(--muted);margin-top:2px}
+.nativeDashboardGrid{display:grid;grid-template-columns:1.2fr .8fr;gap:12px;margin-top:14px}.nativePanel{border-radius:22px;background:var(--panel);border:1px solid var(--border);padding:18px}.nativePanelHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.nativePanelHead small{font-size:8px;font-weight:900;letter-spacing:.11em;color:var(--muted)}.nativePanelHead h3{margin:3px 0 0;font-size:20px}.nativePanelHead button{border:0;border-radius:10px;background:color-mix(in srgb,var(--accent) 11%,var(--panel2));color:var(--accent);font-weight:800;padding:8px 10px;cursor:pointer}.todayWorkoutName{font:800 18px var(--font-display);margin:18px 0 8px}.workoutMiniList{display:flex;flex-direction:column;gap:7px;color:var(--muted);font-size:11px}.trendBadge{display:inline-block;margin:18px 0 14px;padding:7px 9px;border-radius:999px;background:color-mix(in srgb,var(--danger) 10%,transparent);color:var(--danger);font-size:10px;font-weight:800}.trendBadge.down{background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--accent)}.miniProgressTrack{height:8px;border-radius:999px;background:var(--panel2);overflow:hidden}.miniProgressTrack span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:inherit}
+
+@media(max-width:900px){
+  body{padding:0!important;background:var(--bg)}
+  .shell{max-width:680px;padding:calc(10px + env(safe-area-inset-top)) 14px calc(112px + env(safe-area-inset-bottom));}
+  .nativeTopbar{position:sticky;top:0;z-index:60;margin:0 -14px 8px;padding:8px 14px 10px;background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 94%,transparent) 76%,transparent);backdrop-filter:blur(18px)}
+  .nativeBrand .brandTagline{display:none}.nativeBrand .brandLogoWrap{width:38px;height:38px;border-radius:12px}.nativeBrand .brand{font-size:20px}.appMenuBtn,.installMini{width:38px;height:38px;border-radius:12px}.topActions{gap:6px}
+  .nativeTitleRow{margin:8px 0 14px;align-items:center}.nativeTitleRow .eyebrow{display:none}.nativeTitleRow h1{font-size:31px}.nativeTitleRow p{font-size:12px;max-width:260px}.nativeAvatarButton{width:46px;height:46px;border-radius:15px}
+  .nativeHeroCard{border-radius:24px;padding:19px}.nativeHeroCopy h2{font-size:27px}.nativeHeroStats b{font-size:17px}
+  .nativeRingGrid{grid-template-columns:repeat(3,1fr);gap:7px}.nativeRingCard{padding:10px 7px;display:flex;flex-direction:column;gap:7px;text-align:center;border-radius:18px}.ringWrap{width:min(78px,21vw)}.ringMeta small{display:none}.ringMeta b{font-size:13px}
+  .nativeQuickGrid{grid-template-columns:repeat(4,1fr);gap:7px}.nativeQuickGrid button{padding:10px 8px;border-radius:16px;text-align:center}.nativeQuickGrid span{margin:0 auto 7px}.nativeQuickGrid small{display:none}
+  .nativeDashboardGrid{grid-template-columns:1fr}.nativePanel{border-radius:20px;padding:16px}
+  .card{border-radius:20px;box-shadow:none}.grid{gap:10px}.g4,.g3,.g2{grid-template-columns:1fr}
+  .desktopAppNav{display:none!important}
+  .mobileBottomNav{left:10px;right:10px;bottom:calc(8px + env(safe-area-inset-bottom));height:72px;border-radius:23px;padding:7px 6px;background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid color-mix(in srgb,var(--border) 120%,transparent);box-shadow:0 16px 44px rgba(0,0,0,.42);backdrop-filter:blur(24px) saturate(130%)}
+  .mobileBottomNav button{position:relative;padding:5px 2px 4px;gap:2px;border-radius:14px}.mobileBottomNav .navGlyph,.mobileBottomNav .navAvatar{display:grid;place-items:center;width:31px;height:31px;font-size:19px}.mobileBottomNav small{font-size:9px;font-weight:800}.mobileBottomNav button.active:not(.centerNav){color:var(--accent)}
+  .mobileBottomNav .centerNav{transform:translateY(-15px)}.mobileBottomNav .trainNavIcon{width:50px;height:50px;border-radius:17px;font-size:27px;border:4px solid var(--bg);box-shadow:0 10px 28px color-mix(in srgb,var(--accent) 35%,transparent)}.mobileBottomNav .centerNav small{margin-top:1px}
+  .mobileBottomNav .navAvatar{background:var(--panel2);border-radius:11px}
+  .moreSheet{border-radius:28px 28px 0 0}.moreGrid button{min-height:62px}
+  input,select,textarea{font-size:16px!important}
+}
+@media(max-width:420px){
+  .nativeRingCard{padding:9px 4px}.ringWrap{width:70px}.ringInner b{font-size:17px}.nativeQuickGrid b{font-size:11px}.nativeHeroStats span{padding:9px 4px}
+}
