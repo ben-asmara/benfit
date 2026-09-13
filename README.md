@@ -102,3 +102,13 @@ This app is a tracking/planning tool, not a medical device. Calorie estimates—
 ## V2.1 iPhone scanner fix
 
 This release replaces the native BarcodeDetector dependency with html5-qrcode and adds iPhone safe-area/mobile layout fixes.
+
+## V2.2 Meal AI upgrade
+
+- Meal photos are analyzed into separate food items.
+- Each item includes estimated portion, calories, protein, and confidence.
+- Users can edit names, portions, calories, and protein before saving.
+- Totals recalculate live.
+- Saving creates separate daily food-log entries for each item.
+
+To enable meal-photo analysis on Vercel, add `OPENAI_API_KEY` to the project environment variables and redeploy.

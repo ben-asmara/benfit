@@ -26,7 +26,7 @@ export default function Home(){
   const [session,setSession]=useState(null), [loading,setLoading]=useState(true), [tab,setTab]=useState("dashboard");
   const [foods,setFoods]=useState([]),[weights,setWeights]=useState([]),[profile,setProfile]=useState({calorie_goal:2500,protein_goal:200,goal_weight:95});
   const [manual,setManual]=useState({name:"",calories:"",protein:""}), [barcode,setBarcode]=useState(""), [scanMsg,setScanMsg]=useState("");
-  const [photo,setPhoto]=useState(null),[photoResult,setPhotoResult]=useState(null),[photoBusy,setPhotoBusy]=useState(false);
+  const [photo,setPhoto]=useState(null),[photoResult,setPhotoResult]=useState(null),[photoBusy,setPhotoBusy]=useState(false),[photoItems,setPhotoItems]=useState([]);
   const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[authMsg,setAuthMsg]=useState("");
   const scannerRef=useRef(null);
 
@@ -138,15 +138,45 @@ export default function Home(){
   }
 
   async function analyzePhoto(file){
-    setPhoto(file); setPhotoResult(null); setPhotoBusy(true);
+    setPhoto(file); setPhotoResult(null); setPhotoItems([]); setPhotoBusy(true);
     try{
       const fd=new FormData();fd.append("image",file);
       const r=await fetch("/api/analyze-food",{method:"POST",body:fd});
       const j=await r.json();
       if(!r.ok) throw new Error(j.error||"Analysis failed");
       setPhotoResult(j);
+      setPhotoItems((j.items||[]).map((x,i)=>({
+        id:i+1,
+        name:x.name||`Item ${i+1}`,
+        portion:x.portion||"",
+        calories:+x.calories||0,
+        protein:+x.protein||0,
+        confidence:x.confidence||"medium"
+      })));
     }catch(e){setPhotoResult({error:e.message});}
     setPhotoBusy(false);
+  }
+
+  function updatePhotoItem(id,key,value){
+    setPhotoItems(items=>items.map(x=>x.id===id?{...x,[key]:key==="calories"||key==="protein"?+value:value}:x));
+  }
+
+  function removePhotoItem(id){
+    setPhotoItems(items=>items.filter(x=>x.id!==id));
+  }
+
+  async function savePhotoMeal(){
+    if(!photoItems.length){alert("No meal items to save.");return}
+    for(const item of photoItems){
+      await addFood({
+        name:`${item.name}${item.portion?` (${item.portion})`:""}`,
+        calories:item.calories,
+        protein:item.protein,
+        source:"photo_ai"
+      });
+    }
+    setPhoto(null);setPhotoResult(null);setPhotoItems([]);
+    setTab("dashboard");
   }
 
   async function addWeight(e){
@@ -184,7 +214,38 @@ export default function Home(){
     <section className={"section "+(tab==="food"?"active":"")}>
       <div className="grid g2">
         <div className="card"><h2>Log food</h2><div className="field"><label>Food</label><input value={manual.name} onChange={e=>setManual({...manual,name:e.target.value})}/></div><div className="row"><div className="field"><label>Calories</label><input type="number" value={manual.calories} onChange={e=>setManual({...manual,calories:e.target.value})}/></div><div className="field"><label>Protein (g)</label><input type="number" value={manual.protein} onChange={e=>setManual({...manual,protein:e.target.value})}/></div><div></div><button className="btn" onClick={()=>addFood({...manual,source:barcode?"barcode":"manual",barcode})}>Add</button></div>{scanMsg&&<p className="notice small">{scanMsg}</p>}</div>
-        <div className="card"><h2>Food photo</h2><p className="muted small">Upload a meal photo. The server estimates foods, portions, calories and protein. Review before saving.</p><input type="file" accept="image/*" capture="environment" onChange={e=>e.target.files[0]&&analyzePhoto(e.target.files[0])}/>{photo&&<img className="photo" src={URL.createObjectURL(photo)} alt="meal" style={{marginTop:10}}/>}{photoBusy&&<p>Analyzing...</p>}{photoResult&&!photoResult.error&&<div className="notice" style={{marginTop:10}}><b>{photoResult.name}</b><div>{photoResult.calories} kcal • {photoResult.protein} g protein</div><p className="small muted">{photoResult.notes}</p><button className="btn" onClick={()=>addFood({...photoResult,source:"photo_ai"})}>Add estimate</button></div>}{photoResult?.error&&<p className="notice">{photoResult.error}</p>}</div>
+        <div className="card">
+          <h2>Meal photo analyzer</h2>
+          <p className="muted small">Take or upload a meal photo. BenFit estimates each food item separately so you can fix portions before saving.</p>
+          <input type="file" accept="image/*" capture="environment" onChange={e=>e.target.files[0]&&analyzePhoto(e.target.files[0])}/>
+          {photo&&<img className="photo" src={URL.createObjectURL(photo)} alt="meal" style={{marginTop:10}}/>}
+          {photoBusy&&<div className="notice" style={{marginTop:10}}>Analyzing foods, portions, calories and protein...</div>}
+          {photoResult&&!photoResult.error&&<>
+            <div className="notice" style={{marginTop:10}}>
+              <b>{photoResult.meal_name || "Estimated meal"}</b>
+              <p className="small muted">{photoResult.notes}</p>
+            </div>
+            <div style={{marginTop:10}}>
+              {photoItems.map(item=><div key={item.id} className="mealEdit">
+                <div className="mealEditTop">
+                  <input value={item.name} onChange={e=>updatePhotoItem(item.id,"name",e.target.value)} aria-label="Food name"/>
+                  <button className="btn red" onClick={()=>removePhotoItem(item.id)}>Remove</button>
+                </div>
+                <div className="mealEditGrid">
+                  <div className="field"><label>Portion</label><input value={item.portion} onChange={e=>updatePhotoItem(item.id,"portion",e.target.value)} placeholder="e.g. 200 g"/></div>
+                  <div className="field"><label>Calories</label><input type="number" value={item.calories} onChange={e=>updatePhotoItem(item.id,"calories",e.target.value)}/></div>
+                  <div className="field"><label>Protein (g)</label><input type="number" step="0.1" value={item.protein} onChange={e=>updatePhotoItem(item.id,"protein",e.target.value)}/></div>
+                  <div className="field"><label>Confidence</label><input value={item.confidence} disabled/></div>
+                </div>
+              </div>)}
+            </div>
+            <div className="notice" style={{marginTop:10}}>
+              <b>Total: {Math.round(photoItems.reduce((s,x)=>s+(+x.calories||0),0))} kcal • {Math.round(photoItems.reduce((s,x)=>s+(+x.protein||0),0))} g protein</b>
+            </div>
+            <button className="btn" style={{marginTop:10}} onClick={savePhotoMeal}>Save meal to today</button>
+          </>}
+          {photoResult?.error&&<p className="notice">{photoResult.error}</p>}
+        </div>
       </div>
       <div className="card" style={{marginTop:14}}><h3>Today's entries</h3>{foods.map(f=><div className="fooditem" key={f.id}><div><b>{f.name}</b><div className="small muted">{f.calories} kcal • {f.protein_g} g protein • {f.source}</div></div><button className="btn red" onClick={()=>deleteFood(f.id)}>Delete</button></div>)}</div>
     </section>

@@ -39,3 +39,35 @@ body{
   object-fit:cover;
   border-radius:14px;
 }
+
+.mealEdit{
+  padding:12px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:#0d1628;
+  margin-bottom:10px;
+}
+.mealEditTop{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:8px;
+  align-items:center;
+  margin-bottom:8px;
+}
+.mealEditTop input{
+  width:100%;
+  background:#0a1221;
+  color:white;
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:10px;
+  font-weight:700;
+}
+.mealEditGrid{
+  display:grid;
+  grid-template-columns:2fr 1fr 1fr 1fr;
+  gap:8px;
+}
+@media(max-width:900px){
+  .mealEditGrid{grid-template-columns:1fr 1fr}
+}
