@@ -28,7 +28,7 @@ export default function Home(){
   const [manual,setManual]=useState({name:"",calories:"",protein:""}), [barcode,setBarcode]=useState(""), [scanMsg,setScanMsg]=useState("");
   const [photo,setPhoto]=useState(null),[photoResult,setPhotoResult]=useState(null),[photoBusy,setPhotoBusy]=useState(false);
   const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[authMsg,setAuthMsg]=useState("");
-  const videoRef=useRef(null), streamRef=useRef(null);
+  const scannerRef=useRef(null);
 
   useEffect(()=>{
     sb.auth.getSession().then(({data})=>{setSession(data.session);setLoading(false)});
@@ -87,24 +87,55 @@ export default function Home(){
   }
 
   async function startScanner(){
-    setScanMsg("");
+    setScanMsg("Starting camera...");
     try{
-      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
-      streamRef.current=stream; videoRef.current.srcObject=stream; await videoRef.current.play();
-      if("BarcodeDetector" in window){
-        const detector=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e","code_128"]});
-        const loop=async()=>{
-          if(!streamRef.current)return;
-          try{
-            const codes=await detector.detect(videoRef.current);
-            if(codes[0]){stopScanner();lookupBarcode(codes[0].rawValue);return}
-          }catch{}
-          requestAnimationFrame(loop);
-        }; loop();
-      }else setScanMsg("Automatic scanning is not supported in this browser. Enter the barcode below.");
-    }catch(e){setScanMsg("Camera permission was denied or unavailable.");}
+      if(scannerRef.current) await stopScanner();
+      const { Html5Qrcode } = await import("html5-qrcode");
+      const scanner = new Html5Qrcode("qr-reader", { verbose:false });
+      scannerRef.current = scanner;
+
+      const onSuccess = async (decodedText) => {
+        setScanMsg(`Barcode detected: ${decodedText}`);
+        await stopScanner();
+        setBarcode(decodedText);
+        await lookupBarcode(decodedText);
+      };
+
+      await scanner.start(
+        { facingMode:"environment" },
+        {
+          fps:10,
+          qrbox:{ width:280, height:140 },
+          aspectRatio:1.7778,
+          formatsToSupport: [
+            5,   // EAN_13
+            6,   // EAN_8
+            14,  // UPC_A
+            15,  // UPC_E
+            10   // CODE_128
+          ]
+        },
+        onSuccess,
+        () => {}
+      );
+      setScanMsg("Point the camera at the barcode. Hold it steady and fill the box.");
+    }catch(e){
+      console.error(e);
+      setScanMsg("Could not start the scanner. Make sure camera permission is allowed, then try again.");
+    }
   }
-  function stopScanner(){if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}}
+
+  async function stopScanner(){
+    const scanner=scannerRef.current;
+    scannerRef.current=null;
+    if(scanner){
+      try{
+        const state=scanner.getState?.();
+        if(state===2 || state===3) await scanner.stop();
+      }catch{}
+      try{await scanner.clear();}catch{}
+    }
+  }
 
   async function analyzePhoto(file){
     setPhoto(file); setPhotoResult(null); setPhotoBusy(true);
@@ -160,7 +191,7 @@ export default function Home(){
 
     <section className={"section "+(tab==="scanner"?"active":"")}>
       <div className="twoCol">
-        <div className="card"><h2>Barcode scanner</h2><div className="scanner"><video ref={videoRef} playsInline muted/></div><div style={{display:"flex",gap:8,marginTop:10}}><button className="btn" onClick={startScanner}>Start camera</button><button className="btn secondary" onClick={stopScanner}>Stop</button></div><p className="muted small">{scanMsg}</p></div>
+        <div className="card"><h2>Barcode scanner</h2><div className="scanner"><div id="qr-reader"/></div><div style={{display:"flex",gap:8,marginTop:10}}><button className="btn" onClick={startScanner}>Start camera</button><button className="btn secondary" onClick={stopScanner}>Stop</button></div><p className="muted small">{scanMsg || "Works on iPhone Safari, Android Chrome, and desktop browsers with camera access."}</p></div>
         <div className="card"><h2>Manual barcode lookup</h2><div className="field"><label>UPC / EAN</label><input value={barcode} onChange={e=>setBarcode(e.target.value)} placeholder="e.g. 012345678905"/></div><button className="btn" onClick={()=>lookupBarcode(barcode)}>Look up product</button><p className="muted small">Product data is fetched from Open Food Facts. Always confirm serving size against the package.</p></div>
       </div>
     </section>
