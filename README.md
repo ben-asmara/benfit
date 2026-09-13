@@ -151,3 +151,21 @@ Adds:
 ### Database step
 
 Run `supabase/v2_4_migration.sql` once in Supabase SQL Editor before using the new tabs.
+
+
+## V2.5 Polish + Automation
+
+Adds:
+- mobile weekly summary hero
+- favorite foods
+- reusable meal templates
+- workout history
+- reminder schedule synced through Supabase
+- browser notification permission/test
+- clearer weekly summary guidance
+
+### Reminder note
+Web notifications, especially background scheduling on iPhone PWAs, are not universally reliable without a dedicated push notification service. BenFit stores the reminder schedule and can request browser notification permission, while Apple Calendar remains the reliable recurring-reminder path on iPhone.
+
+### Database step
+Run `supabase/v2_5_migration.sql` once in Supabase SQL Editor.

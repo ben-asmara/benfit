@@ -110,3 +110,34 @@ body{
 .trendLegend{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;margin-top:6px}
 .checkinCard{padding:12px 0;border-bottom:1px solid var(--border)}
 textarea{resize:vertical}
+
+.mobileHero{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:18px;
+  background:linear-gradient(135deg,rgba(38,73,120,.95),rgba(30,46,78,.95));
+}
+.heroStat{font-size:34px;font-weight:900;line-height:1.05;margin:4px 0}
+.heroMini{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;min-width:330px}
+.heroMini span{background:rgba(255,255,255,.08);padding:10px;border-radius:12px;text-align:center}
+.heroMini b,.heroMini small{display:block}
+.heroMini small{color:#c7d5e7;font-size:11px;margin-top:3px}
+.foodActions{display:flex;gap:6px;flex-wrap:wrap}
+.templateCard,.historyDay,.reminderCard{
+  padding:12px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:#0d1628;
+  margin-bottom:10px;
+}
+.historyHead,.reminderCard{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.dayChecks{display:flex;gap:8px;flex-wrap:wrap}
+.dayChecks label{display:flex;align-items:center;gap:4px;background:#0d1628;padding:7px 9px;border-radius:9px;border:1px solid var(--border);font-size:12px}
+.dayChecks input{width:auto}
+@media(max-width:900px){
+  .mobileHero{align-items:flex-start;flex-direction:column}
+  .heroMini{min-width:0;width:100%}
+  .heroStat{font-size:30px}
+  .reminderCard{align-items:flex-start;flex-direction:column}
+}
