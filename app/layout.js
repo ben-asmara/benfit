@@ -1,4 +1,8 @@
 import "./globals.css";
+import { Manrope, Space_Grotesk } from "next/font/google";
+
+const manrope = Manrope({ subsets:["latin"], variable:"--font-body" });
+const spaceGrotesk = Space_Grotesk({ subsets:["latin"], variable:"--font-display" });
 
 export const metadata = {
   title: "BenFit Journey",
@@ -14,7 +18,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}<script src="/register-sw.js" defer></script></body>
+      <body className={`${manrope.variable} ${spaceGrotesk.variable}`}>{children}<script src="/register-sw.js" defer></script></body>
     </html>
   );
 }

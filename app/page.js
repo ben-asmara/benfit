@@ -503,8 +503,8 @@ export default function Home(){
   return <main className="shell">
     <div className="top appTop">
       <div className="brandWrap">
-        <div className="brandMark">BF</div>
-        <div><div className="brand">BenFit</div><div className="muted small">Build the body. Keep the system.</div></div>
+        <div className="brandLogoWrap"><img src="/benfit-logo.png" alt="BenFit logo" className="brandLogo"/></div>
+        <div><div className="brand">BenFit</div><div className="muted small brandTagline">Track • Fuel • Train • Progress</div></div>
       </div>
       <button className="profileChip" onClick={()=>setTab("profile")}>
         <span className="profileAvatar">{avatar}</span>
@@ -828,7 +828,7 @@ export default function Home(){
 
     {showOnboarding&&<div className="modalBackdrop">
       <div className="onboardingCard">
-        <div className="onboardingLogo">BF</div>
+        <img src="/benfit-logo.png" alt="BenFit logo" className="onboardingBrandLogo"/>
         <div className="eyebrow">Welcome to BenFit</div>
         <h2>Make it yours</h2>
         <p className="muted">Choose how BenFit should welcome you. You can change everything later.</p>
