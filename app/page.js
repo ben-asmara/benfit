@@ -60,7 +60,7 @@ function ProgressPhotoUploader({onUpload}){
 
 export default function Home(){
   const sb = useMemo(()=>supabaseBrowser(),[]);
-  const [session,setSession]=useState(null), [loading,setLoading]=useState(true), [tab,setTab]=useState("dashboard");
+  const [session,setSession]=useState(null), [loading,setLoading]=useState(true), [tab,setTab]=useState("dashboard"), [theme,setTheme]=useState("emerald");
   const [foods,setFoods]=useState([]),[weights,setWeights]=useState([]),[profile,setProfile]=useState({calorie_goal:2500,protein_goal:200,goal_weight:95}),[measurements,setMeasurements]=useState([]),[prs,setPrs]=useState([]),[progressPhotos,setProgressPhotos]=useState([]),[dailyLogs,setDailyLogs]=useState([]),[workoutSets,setWorkoutSets]=useState([]),[checkins,setCheckins]=useState([]);
   const [manual,setManual]=useState({name:"",calories:"",protein:""}), [barcode,setBarcode]=useState(""), [scanMsg,setScanMsg]=useState("");
   const [photo,setPhoto]=useState(null),[photoResult,setPhotoResult]=useState(null),[photoBusy,setPhotoBusy]=useState(false),[photoItems,setPhotoItems]=useState([]);
@@ -72,6 +72,18 @@ export default function Home(){
     const {data:{subscription}}=sb.auth.onAuthStateChange((_e,s)=>setSession(s));
     return ()=>subscription.unsubscribe();
   },[sb]);
+
+  useEffect(()=>{
+    const saved=localStorage.getItem("benfit-theme")||"emerald";
+    setTheme(saved);
+    document.documentElement.dataset.theme=saved;
+  },[]);
+
+  function changeTheme(next){
+    setTheme(next);
+    localStorage.setItem("benfit-theme",next);
+    document.documentElement.dataset.theme=next;
+  }
 
   useEffect(()=>{ if(session) refresh(); },[session]);
 
@@ -658,7 +670,31 @@ export default function Home(){
     </section>
 
     <section className={"section "+(tab==="settings"?"active":"")}>
-      <div className="card"><h2>Targets</h2><div className="row"><div className="field"><label>Calories</label><input type="number" value={profile.calorie_goal} onChange={e=>setProfile({...profile,calorie_goal:e.target.value})}/></div><div className="field"><label>Protein (g)</label><input type="number" value={profile.protein_goal} onChange={e=>setProfile({...profile,protein_goal:e.target.value})}/></div><div className="field"><label>Goal weight (kg)</label><input type="number" value={profile.goal_weight} onChange={e=>setProfile({...profile,goal_weight:e.target.value})}/></div><button className="btn" onClick={saveProfile}>Save</button></div></div>
+      <div className="grid g2">
+        <div className="card"><h2>Targets</h2><div className="row"><div className="field"><label>Calories</label><input type="number" value={profile.calorie_goal} onChange={e=>setProfile({...profile,calorie_goal:e.target.value})}/></div><div className="field"><label>Protein (g)</label><input type="number" value={profile.protein_goal} onChange={e=>setProfile({...profile,protein_goal:e.target.value})}/></div><div className="field"><label>Goal weight (kg)</label><input type="number" value={profile.goal_weight} onChange={e=>setProfile({...profile,goal_weight:e.target.value})}/></div><button className="btn" onClick={saveProfile}>Save</button></div></div>
+        <div className="card">
+          <h2>App appearance</h2>
+          <p className="muted small">Change the entire BenFit color system. Your choice is saved on this device.</p>
+          <div className="themeGrid">
+            <button className={"themeChoice "+(theme==="emerald"?"selected":"")} onClick={()=>changeTheme("emerald")}>
+              <span className="themeSwatch emeraldSwatch"></span>
+              <span><b>Emerald Night</b><small>Black + emerald + mint</small></span>
+            </button>
+            <button className={"themeChoice "+(theme==="royal"?"selected":"")} onClick={()=>changeTheme("royal")}>
+              <span className="themeSwatch royalSwatch"></span>
+              <span><b>Royal Purple</b><small>Deep navy + violet</small></span>
+            </button>
+            <button className={"themeChoice "+(theme==="sunset"?"selected":"")} onClick={()=>changeTheme("sunset")}>
+              <span className="themeSwatch sunsetSwatch"></span>
+              <span><b>Sunset</b><small>Charcoal + orange + rose</small></span>
+            </button>
+            <button className={"themeChoice "+(theme==="frost"?"selected":"")} onClick={()=>changeTheme("frost")}>
+              <span className="themeSwatch frostSwatch"></span>
+              <span><b>Frost Light</b><small>Clean white + cobalt</small></span>
+            </button>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 }

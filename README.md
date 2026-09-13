@@ -169,3 +169,31 @@ Web notifications, especially background scheduling on iPhone PWAs, are not univ
 
 ### Database step
 Run `supabase/v2_5_migration.sql` once in Supabase SQL Editor.
+
+
+## V2.6 Full UI Theme Upgrade
+
+Adds a full-app color system with 4 appearance themes:
+
+- Emerald Night (default)
+- Royal Purple
+- Sunset
+- Frost Light
+
+The selected theme changes:
+- backgrounds
+- cards
+- tabs
+- buttons
+- progress bars
+- charts
+- inputs
+- notices
+- meal cards
+- workout history
+- reminders
+- all mobile UI surfaces
+
+Theme preference is stored locally in the browser and can be changed from Settings -> App appearance.
+
+No Supabase migration is required for V2.6.
