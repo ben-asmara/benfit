@@ -87,7 +87,7 @@ function ProgressPhotoUploader({onUpload}){
 export default function Home(){
   const sb = useMemo(()=>supabaseBrowser(),[]);
   const [session,setSession]=useState(null), [loading,setLoading]=useState(true), [tab,setTab]=useState("dashboard"), [theme,setTheme]=useState("emerald"), [showOnboarding,setShowOnboarding]=useState(false), [moreOpen,setMoreOpen]=useState(false);
-  const [foods,setFoods]=useState([]),[weights,setWeights]=useState([]),[profile,setProfile]=useState({calorie_goal:2500,protein_goal:200,goal_weight:95,username:"",display_name:"",avatar:"bolt",bio:"",age:"",sex:"male",height_cm:"",start_weight_kg:"",activity_level:"moderate",goal_type:"lose"}),[measurements,setMeasurements]=useState([]),[prs,setPrs]=useState([]),[progressPhotos,setProgressPhotos]=useState([]),[dailyLogs,setDailyLogs]=useState([]),[workoutSets,setWorkoutSets]=useState([]),[checkins,setCheckins]=useState([]);
+  const [foods,setFoods]=useState([]),[weights,setWeights]=useState([]),[profile,setProfile]=useState({calorie_goal:2500,protein_goal:200,goal_weight:95,username:"",display_name:"",avatar:"bolt",bio:"",age:"",sex:"male",height_cm:"",start_weight_kg:"",activity_level:"moderate",goal_type:"lose"}),[measurements,setMeasurements]=useState([]),[prs,setPrs]=useState([]),[progressPhotos,setProgressPhotos]=useState([]),[dailyLogs,setDailyLogs]=useState([]),[workoutSets,setWorkoutSets]=useState([]),[checkins,setCheckins]=useState([]),[calendarEvents,setCalendarEvents]=useState([]),[calendarSettings,setCalendarSettings]=useState(null),[pushEnabled,setPushEnabled]=useState(false);
   const [manual,setManual]=useState({name:"",calories:"",protein:""}), [barcode,setBarcode]=useState(""), [scanMsg,setScanMsg]=useState("");
   const [photo,setPhoto]=useState(null),[photoResult,setPhotoResult]=useState(null),[photoBusy,setPhotoBusy]=useState(false),[photoItems,setPhotoItems]=useState([]);
   const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[authMsg,setAuthMsg]=useState("");
@@ -136,7 +136,7 @@ export default function Home(){
 
   async function refresh(){
     const uid=session.user.id;
-    const [f,w,p,m,pr,ph,dl,ws,ci]=await Promise.all([
+    const [f,w,p,m,pr,ph,dl,ws,ci,ce,cs,ps]=await Promise.all([
       sb.from("food_logs").select("*").eq("user_id",uid).eq("eaten_on",todayISO()).order("created_at",{ascending:false}),
       sb.from("weights").select("*").eq("user_id",uid).order("logged_on",{ascending:true}),
       sb.from("profiles").select("*").eq("id",uid).maybeSingle(),
@@ -145,7 +145,10 @@ export default function Home(){
       sb.from("progress_photos").select("*").eq("user_id",uid).order("logged_on",{ascending:false}),
       sb.from("daily_logs").select("*").eq("user_id",uid).order("logged_on",{ascending:false}).limit(60),
       sb.from("workout_sets").select("*").eq("user_id",uid).order("logged_on",{ascending:false}).order("created_at",{ascending:false}).limit(200),
-      sb.from("weekly_checkins").select("*").eq("user_id",uid).order("week_of",{ascending:false}).limit(20)
+      sb.from("weekly_checkins").select("*").eq("user_id",uid).order("week_of",{ascending:false}).limit(20),
+      sb.from("calendar_events").select("*").eq("user_id",uid).order("event_date",{ascending:true}).order("start_time",{ascending:true}),
+      sb.from("calendar_settings").select("*").eq("user_id",uid).maybeSingle(),
+      sb.from("push_subscriptions").select("id").eq("user_id",uid).limit(1)
     ]);
     if(!f.error)setFoods(f.data||[]);
     if(!w.error)setWeights(w.data||[]);
@@ -159,6 +162,9 @@ export default function Home(){
     if(!dl.error)setDailyLogs(dl.data||[]);
     if(!ws.error)setWorkoutSets(ws.data||[]);
     if(!ci.error)setCheckins(ci.data||[]);
+    if(!ce.error)setCalendarEvents(ce.data||[]);
+    if(cs.data)setCalendarSettings(cs.data);
+    if(!ps.error)setPushEnabled((ps.data||[]).length>0);
   }
 
   async function signUp(){
@@ -589,6 +595,166 @@ export default function Home(){
     return inRightDirection?Math.max(0,Math.min(100,(moved/total)*100)):0;
   }
 
+
+  function urlBase64ToUint8Array(base64String){
+    const padding="=".repeat((4-base64String.length%4)%4);
+    const base64=(base64String+padding).replace(/-/g,"+").replace(/_/g,"/");
+    const raw=window.atob(base64);
+    return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
+  }
+
+  async function enablePushNotifications(){
+    try{
+      if(!("serviceWorker" in navigator) || !("PushManager" in window)){
+        alert("Push notifications are not supported in this browser.");
+        return;
+      }
+      const permission=await Notification.requestPermission();
+      if(permission!=="granted"){
+        alert("Notification permission was not granted.");
+        return;
+      }
+      const reg=await navigator.serviceWorker.ready;
+      const vapid=process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if(!vapid){
+        alert("BenFit push notifications are not configured yet. Add NEXT_PUBLIC_VAPID_PUBLIC_KEY in Vercel.");
+        return;
+      }
+      let sub=await reg.pushManager.getSubscription();
+      if(!sub){
+        sub=await reg.pushManager.subscribe({
+          userVisibleOnly:true,
+          applicationServerKey:urlBase64ToUint8Array(vapid)
+        });
+      }
+      const payload=sub.toJSON();
+      const {error}=await sb.from("push_subscriptions").upsert({
+        user_id:session.user.id,
+        endpoint:payload.endpoint,
+        p256dh:payload.keys?.p256dh||"",
+        auth:payload.keys?.auth||"",
+        user_agent:navigator.userAgent
+      },{onConflict:"endpoint"});
+      if(error) throw error;
+      setPushEnabled(true);
+      new Notification("BenFit notifications enabled",{body:"Workout, weigh-in, meal-prep, and custom calendar reminders can now reach this device."});
+    }catch(e){
+      alert(e.message||"Could not enable notifications.");
+    }
+  }
+
+  async function disablePushNotifications(){
+    try{
+      const reg=await navigator.serviceWorker.ready;
+      const sub=await reg.pushManager.getSubscription();
+      if(sub){
+        await sb.from("push_subscriptions").delete().eq("endpoint",sub.endpoint);
+        await sub.unsubscribe();
+      }
+      setPushEnabled(false);
+    }catch(e){ alert(e.message||"Could not disable notifications."); }
+  }
+
+  async function ensureCalendarSettings(){
+    if(calendarSettings) return calendarSettings;
+    const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC";
+    const {data,error}=await sb.from("calendar_settings").upsert({
+      user_id:session.user.id,
+      timezone
+    },{onConflict:"user_id"}).select().single();
+    if(error) throw error;
+    setCalendarSettings(data);
+    return data;
+  }
+
+  async function addCalendarEvent(e){
+    e.preventDefault();
+    const fd=new FormData(e.currentTarget);
+    const row={
+      user_id:session.user.id,
+      title:String(fd.get("title")||"").trim(),
+      category:String(fd.get("category")||"custom"),
+      event_date:String(fd.get("date")||todayISO()),
+      start_time:String(fd.get("start_time")||"08:00"),
+      end_time:String(fd.get("end_time")||"09:00"),
+      repeat_rule:String(fd.get("repeat_rule")||"none"),
+      reminder_minutes:+fd.get("reminder_minutes")||0,
+      notes:String(fd.get("notes")||"").trim(),
+      color:String(fd.get("color")||"green")
+    };
+    if(!row.title){alert("Enter an event title.");return}
+    const {error}=await sb.from("calendar_events").insert(row);
+    if(error) alert(error.message); else {e.currentTarget.reset();refresh();}
+  }
+
+  async function deleteCalendarEvent(id){
+    await sb.from("calendar_events").delete().eq("id",id);
+    refresh();
+  }
+
+  async function seedWorkoutCalendar(){
+    const existing=calendarEvents.some(x=>x.category==="workout");
+    if(existing && !confirm("You already have workout events. Add the starter workout week anyway?")) return;
+    const today=new Date();
+    const nextDateFor=(weekday)=>{
+      const d=new Date(today);
+      const diff=(weekday-d.getDay()+7)%7;
+      d.setDate(d.getDate()+diff);
+      return d.toISOString().slice(0,10);
+    };
+    const rows=[
+      {day:1,title:"Push workout",start:"19:00",end:"20:15"},
+      {day:2,title:"Pull workout",start:"08:00",end:"09:00"},
+      {day:4,title:"Leg workout",start:"17:00",end:"18:20"},
+      {day:5,title:"Upper workout",start:"16:00",end:"17:15"},
+      {day:6,title:"Lower + Core",start:"11:00",end:"12:20"}
+    ].map(x=>({
+      user_id:session.user.id,
+      title:x.title,
+      category:"workout",
+      event_date:nextDateFor(x.day),
+      start_time:x.start,
+      end_time:x.end,
+      repeat_rule:"weekly",
+      reminder_minutes:30,
+      color:"green"
+    }));
+    const {error}=await sb.from("calendar_events").insert(rows);
+    if(error) alert(error.message); else refresh();
+  }
+
+  async function updateCalendarTimezone(){
+    try{
+      const timezone=Intl.DateTimeFormat().resolvedOptions().timeZone||"UTC";
+      const {data,error}=await sb.from("calendar_settings").upsert({
+        user_id:session.user.id,
+        timezone
+      },{onConflict:"user_id"}).select().single();
+      if(error) throw error;
+      setCalendarSettings(data);
+      alert(`Calendar timezone set to ${timezone}`);
+    }catch(e){alert(e.message)}
+  }
+
+  async function copyCalendarFeed(){
+    try{
+      const s=await ensureCalendarSettings();
+      const url=`${window.location.origin}/api/calendar/${s.feed_token}`;
+      await navigator.clipboard.writeText(url.replace(/^https:/,"webcal:"));
+      alert("Personal Apple Calendar subscription link copied.");
+    }catch(e){alert(e.message)}
+  }
+
+  function nextCalendarEvents(){
+    const now=new Date();
+    const dayNames=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    return [...calendarEvents].sort((a,b)=>{
+      const aa=`${a.event_date}T${a.start_time||"00:00"}`;
+      const bb=`${b.event_date}T${b.start_time||"00:00"}`;
+      return aa.localeCompare(bb);
+    }).slice(0,12);
+  }
+
   const totals=foods.reduce((a,f)=>({cal:a.cal+(f.calories||0),pro:a.pro+(f.protein_g||0)}),{cal:0,pro:0});
   const avg7=avgWeightLast(7), change7=weeklyChange(), latestMeasurement=measurements.at(-1), daily=currentDaily(), score=adherenceScore(), streak=streakDays(), remainingCal=Math.max(0,profile.calorie_goal-totals.cal), remainingPro=Math.max(0,profile.protein_goal-totals.pro), milestone=nextMilestone(), journey=journeyPercent(), avatar=avatarEmoji(profile.avatar);
   if(loading)return <main className="shell"><div className="card">Loading BenFit...</div></main>;
@@ -877,7 +1043,56 @@ export default function Home(){
     </section>
 
     <section className={"section "+(tab==="calendar"?"active":"")}>
-      <div className="grid g2"><div className="card"><h2>Apple Calendar</h2><p className="muted">Download your weekly fitness schedule as an .ics calendar file, then open it on iPhone and add the events to Apple Calendar.</p><a className="btn" href="/api/calendar">Download calendar (.ics)</a></div><div className="card"><h2>Calendar subscription</h2><p className="muted small">For automatic recurring updates, deploy the app and subscribe to the public calendar endpoint using the webcal version of your app URL. This version provides one-way sync from BenFit to Apple Calendar.</p><div className="notice">Example: webcal://YOUR-DOMAIN.com/api/calendar</div></div></div>
+      <NativeTitle title="My Calendar" subtitle="Your workouts, classes, work, meal prep, weigh-ins, and reminders — personalized to your account."/>
+      <div className="calendarActionRow">
+        <button className="btn" onClick={seedWorkoutCalendar}>＋ Starter workout week</button>
+        <button className="btn secondary" onClick={copyCalendarFeed}> Copy Apple subscription</button>
+        <button className="btn secondary" onClick={updateCalendarTimezone}>Use my timezone</button>
+      </div>
+
+      <div className="grid g2" style={{marginTop:14}}>
+        <form className="card" onSubmit={addCalendarEvent}>
+          <h2>Add event</h2>
+          <div className="field"><label>Title</label><input name="title" placeholder="Gym — Push Day" required/></div>
+          <div className="calendarFormGrid">
+            <div className="field"><label>Category</label><select name="category"><option value="workout">Workout</option><option value="work">Work</option><option value="school">School / Class</option><option value="meal">Meal prep</option><option value="weighin">Weigh-in</option><option value="recovery">Recovery</option><option value="custom">Custom</option></select></div>
+            <div className="field"><label>Date</label><input name="date" type="date" defaultValue={todayISO()} required/></div>
+            <div className="field"><label>Starts</label><input name="start_time" type="time" defaultValue="08:00" required/></div>
+            <div className="field"><label>Ends</label><input name="end_time" type="time" defaultValue="09:00" required/></div>
+            <div className="field"><label>Repeats</label><select name="repeat_rule"><option value="none">Does not repeat</option><option value="daily">Daily</option><option value="weekly">Weekly</option></select></div>
+            <div className="field"><label>Reminder</label><select name="reminder_minutes"><option value="0">At event time</option><option value="10">10 min before</option><option value="15">15 min before</option><option value="30" selected>30 min before</option><option value="60">1 hour before</option><option value="1440">1 day before</option></select></div>
+            <div className="field"><label>Color</label><select name="color"><option value="green">Green</option><option value="blue">Blue</option><option value="purple">Purple</option><option value="orange">Orange</option><option value="pink">Pink</option></select></div>
+          </div>
+          <div className="field"><label>Notes</label><textarea name="notes" rows="3" placeholder="Optional notes..."/></div>
+          <button className="btn">Save event</button>
+        </form>
+
+        <div className="card">
+          <div className="calendarCardHead"><div><h2>Upcoming</h2><p className="muted small">{calendarSettings?.timezone||Intl.DateTimeFormat().resolvedOptions().timeZone||"Local timezone"}</p></div></div>
+          <div className="eventList">
+            {nextCalendarEvents().length?nextCalendarEvents().map(ev=><div className={`calendarEvent event-${ev.color||"green"}`} key={ev.id}>
+              <div className="calendarDateBadge"><b>{new Date(ev.event_date+"T12:00:00").toLocaleDateString(undefined,{day:"2-digit"})}</b><small>{new Date(ev.event_date+"T12:00:00").toLocaleDateString(undefined,{month:"short"})}</small></div>
+              <div className="calendarEventBody"><b>{ev.title}</b><span>{ev.start_time?.slice(0,5)}–{ev.end_time?.slice(0,5)} · {ev.category}</span><small>{ev.repeat_rule!=="none"?`Repeats ${ev.repeat_rule} · `:""}Reminder {ev.reminder_minutes} min before</small></div>
+              <button className="calendarDelete" onClick={()=>deleteCalendarEvent(ev.id)}>×</button>
+            </div>):<p className="muted">Your calendar is empty. Add an event or generate the starter workout week.</p>}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid g2" style={{marginTop:14}}>
+        <div className="card">
+          <h2>Push notifications</h2>
+          <p className="muted">Receive BenFit reminders on supported phones and browsers. On iPhone, install BenFit to your Home Screen first, then enable notifications from the installed app.</p>
+          <div className="notificationStatus"><span className={pushEnabled?"statusDot on":"statusDot"}></span><b>{pushEnabled?"Notifications enabled on this device":"Notifications off on this device"}</b></div>
+          <button className="btn" onClick={pushEnabled?disablePushNotifications:enablePushNotifications}>{pushEnabled?"Disable on this device":"Enable notifications"}</button>
+        </div>
+        <div className="card">
+          <h2>Apple / Google Calendar</h2>
+          <p className="muted">Every BenFit account gets its own private calendar feed token. Subscribe once and your recurring BenFit events will stay separate from your friends' calendars.</p>
+          <button className="btn secondary" onClick={copyCalendarFeed}>Copy my personal subscription</button>
+          <p className="small muted" style={{marginTop:10}}>Apple Calendar: Add Calendar → Add Subscription Calendar → paste the copied webcal link. Google Calendar subscriptions are usually added from Google Calendar on the web using “From URL”.</p>
+        </div>
+      </div>
     </section>
 
 

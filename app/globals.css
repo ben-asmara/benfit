@@ -720,3 +720,56 @@ button{touch-action:manipulation}
 @media(max-width:420px){
   .nativeRingCard{padding:9px 4px}.ringWrap{width:70px}.ringInner b{font-size:17px}.nativeQuickGrid b{font-size:11px}.nativeHeroStats span{padding:9px 4px}
 }
+
+
+/* ---------- V3.1 Personalized Calendar + Notifications ---------- */
+.calendarActionRow{display:flex;gap:8px;flex-wrap:wrap}
+.calendarFormGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.calendarCardHead{display:flex;justify-content:space-between;align-items:flex-start}
+.eventList{display:flex;flex-direction:column;gap:9px}
+.calendarEvent{
+  display:grid;grid-template-columns:48px 1fr 34px;gap:10px;align-items:center;
+  padding:10px;border-radius:15px;border:1px solid var(--border);
+  background:color-mix(in srgb,var(--panel2) 38%,var(--panel));
+  position:relative;overflow:hidden;
+}
+.calendarEvent:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent)}
+.calendarEvent.event-blue:before{background:#4f9cff}
+.calendarEvent.event-purple:before{background:#a78bfa}
+.calendarEvent.event-orange:before{background:#ff9a55}
+.calendarEvent.event-pink:before{background:#f472b6}
+.calendarDateBadge{
+  width:44px;height:48px;border-radius:12px;background:color-mix(in srgb,var(--accent) 11%,var(--panel));
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.calendarDateBadge b{font-family:var(--font-display);font-size:18px;line-height:1}
+.calendarDateBadge small{text-transform:uppercase;color:var(--muted);font-size:9px;margin-top:3px;letter-spacing:.08em}
+.calendarEventBody{display:flex;flex-direction:column;min-width:0}
+.calendarEventBody>b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.calendarEventBody span{color:var(--muted);font-size:11px;margin-top:2px}
+.calendarEventBody small{color:var(--muted);font-size:10px;margin-top:3px}
+.calendarDelete{
+  width:30px;height:30px;border:0;border-radius:10px;background:color-mix(in srgb,var(--danger) 14%,transparent);
+  color:var(--danger);cursor:pointer;font-size:18px
+}
+.notificationStatus{display:flex;align-items:center;gap:8px;margin:14px 0}
+.statusDot{width:10px;height:10px;border-radius:99px;background:var(--muted);box-shadow:0 0 0 4px color-mix(in srgb,var(--muted) 12%,transparent)}
+.statusDot.on{background:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 13%,transparent)}
+.calendarMiniCard{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  border:1px solid var(--border);border-radius:18px;padding:13px 15px;margin:14px 0;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 8%,var(--panel)),var(--panel));
+  cursor:pointer;
+}
+.calendarMiniCard>div{display:flex;align-items:center;gap:11px}
+.calendarMiniCard>div>div{display:flex;flex-direction:column}
+.calendarMiniCard b{font-size:13px}.calendarMiniCard small{color:var(--muted);font-size:10px;margin-top:2px}
+.calendarMiniIcon{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:var(--panel2);color:var(--accent);font-size:20px}
+.calendarMiniCard>span:last-child{font-size:24px;color:var(--muted)}
+@media(max-width:900px){
+  .calendarFormGrid{grid-template-columns:1fr 1fr}
+  .calendarActionRow .btn{flex:1 1 auto}
+}
+@media(max-width:520px){
+  .calendarFormGrid{grid-template-columns:1fr}
+}

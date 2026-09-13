@@ -262,3 +262,46 @@ Adds a native-style PWA shell:
 - portrait PWA manifest and full-screen standalone launch
 
 No Supabase migration is required for V3.0.
+
+
+## V3.1 Personalized Calendar + Push Notifications
+
+Each account now has its own:
+- calendar events
+- timezone
+- private calendar subscription token
+- recurring workout / school / work / meal-prep / weigh-in events
+- event reminders
+- web push subscriptions per device
+
+### Database
+Run `supabase/v3_1_migration.sql` once.
+
+### Vercel environment variables
+Add:
+- `SUPABASE_SERVICE_ROLE_KEY` — server-only Supabase service role key
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
+- `VAPID_PRIVATE_KEY`
+- `VAPID_SUBJECT` — e.g. `mailto:you@example.com`
+- `CRON_SECRET` — a long random value
+
+Never put the service-role key or VAPID private key in a `NEXT_PUBLIC_` variable.
+
+### Generate VAPID keys
+After `npm install`, run:
+
+```bash
+npm run vapid
+```
+
+Copy the public and private values into Vercel environment variables.
+
+### iPhone notifications
+Web push on iPhone works best when BenFit is installed to the Home Screen. Open the installed BenFit app and tap `Calendar -> Enable notifications`.
+
+### Personal Apple Calendar
+Each account has a unique subscription URL at:
+
+`/api/calendar/<private-feed-token>`
+
+Use `Calendar -> Copy Apple subscription`, then add it in Apple Calendar as a subscription calendar. Friends receive different feed tokens and see only their own BenFit events.
